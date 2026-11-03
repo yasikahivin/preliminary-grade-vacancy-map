@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preliminary Grade Vacancy Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>/* required styles */
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	}
+.leaflet-container {
+	overflow: hidden;
+	}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	        user-select: none;
+	  -webkit-user-drag: none;
+	}
+/* Prevents IE11 from highlighting tiles in blue */
+.leaflet-tile::selection {
+	background: transparent;
+}
+/* Safari renders non-retina tile on retina better with this, but Chrome is worse */
+.leaflet-safari .leaflet-tile {
+	image-rendering: -webkit-optimize-contrast;
+	}
+/* hack that prevents hw layers "stretching" when loading new tiles */
+.leaflet-safari .leaflet-tile-container {
+	width: 1600px;
+	height: 1600px;
+	-webkit-transform-origin: 0 0;
+	}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	display: block;
+	}
+/* .leaflet-container svg: reset svg max-width decleration shipped in Joomla! (joomla.org) 3.x */
+/* .leaflet-container img: map is broken in FF if you have max-width: 100% on tiles */
+.leaflet-container .leaflet-overlay-pane svg {
+	max-width: none !important;
+	max-height: none !important;
+	}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+	max-width: none !important;
+	max-height: none !important;
+	width: auto;
+	padding: 0;
+	}
+
+.leaflet-container img.leaflet-tile {
+	/* See: https://bugs.chromium.org/p/chromium/issues/detail?id=600120 */
+	mix-blend-mode: plus-lighter;
+}
+
+.leaflet-container.leaflet-touch-zoom {
+	-ms-touch-action: pan-x pan-y;
+	touch-action: pan-x pan-y;
+	}
+.leaflet-container.leaflet-touch-drag {
+	-ms-touch-action: pinch-zoom;
+	/* Fallback for FF which doesn't support pinch-zoom */
+	touch-action: none;
+	touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+	-ms-touch-action: none;
+	touch-action: none;
+}
+.leaflet-container {
+	-webkit-tap-highlight-color: transparent;
+}
+.leaflet-container a {
+	-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+	filter: inherit;
+	visibility: hidden;
+	}
+.leaflet-tile-loaded {
+	visibility: inherit;
+	}
+.leaflet-zoom-box {
+	width: 0;
+	height: 0;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	z-index: 800;
+	}
+/* workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=888319 */
+.leaflet-overlay-pane svg {
+	-moz-user-select: none;
+	}
+
+.leaflet-pane         { z-index: 400; }
+
+.leaflet-tile-pane    { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane  { z-index: 500; }
+.leaflet-marker-pane  { z-index: 600; }
+.leaflet-tooltip-pane   { z-index: 650; }
+.leaflet-popup-pane   { z-index: 700; }
+
+.leaflet-map-pane canvas { z-index: 100; }
+.leaflet-map-pane svg    { z-index: 200; }
+
+.leaflet-vml-shape {
+	width: 1px;
+	height: 1px;
+	}
+.lvml {
+	behavior: url(#default#VML);
+	display: inline-block;
+	position: absolute;
+	}
+
+
+/* control positioning */
+
+.leaflet-control {
+	position: relative;
+	z-index: 800;
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+.leaflet-top,
+.leaflet-bottom {
+	position: absolute;
+	z-index: 1000;
+	pointer-events: none;
+	}
+.leaflet-top {
+	top: 0;
+	}
+.leaflet-right {
+	right: 0;
+	}
+.leaflet-bottom {
+	bottom: 0;
+	}
+.leaflet-left {
+	left: 0;
+	}
+.leaflet-control {
+	float: left;
+	clear: both;
+	}
+.leaflet-right .leaflet-control {
+	float: right;
+	}
+.leaflet-top .leaflet-control {
+	margin-top: 10px;
+	}
+.leaflet-bottom .leaflet-control {
+	margin-bottom: 10px;
+	}
+.leaflet-left .leaflet-control {
+	margin-left: 10px;
+	}
+.leaflet-right .leaflet-control {
+	margin-right: 10px;
+	}
+
+
+/* zoom and fade animations */
+
+.leaflet-fade-anim .leaflet-popup {
+	opacity: 0;
+	-webkit-transition: opacity 0.2s linear;
+	   -moz-transition: opacity 0.2s linear;
+	        transition: opacity 0.2s linear;
+	}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+	opacity: 1;
+	}
+.leaflet-zoom-animated {
+	-webkit-transform-origin: 0 0;
+	    -ms-transform-origin: 0 0;
+	        transform-origin: 0 0;
+	}
+svg.leaflet-zoom-animated {
+	will-change: transform;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+	-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+	   -moz-transition:    -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+	        transition:         transform 0.25s cubic-bezier(0,0,0.25,1);
+	}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+	-webkit-transition: none;
+	   -moz-transition: none;
+	        transition: none;
+	}
+
+.leaflet-zoom-anim .leaflet-zoom-hide {
+	visibility: hidden;
+	}
+
+
+/* cursors */
+
+.leaflet-interactive {
+	cursor: pointer;
+	}
+.leaflet-grab {
+	cursor: -webkit-grab;
+	cursor:    -moz-grab;
+	cursor:         grab;
+	}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+	cursor: crosshair;
+	}
+.leaflet-popup-pane,
+.leaflet-control {
+	cursor: auto;
+	}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+	cursor: move;
+	cursor: -webkit-grabbing;
+	cursor:    -moz-grabbing;
+	cursor:         grabbing;
+	}
+
+/* marker & overlays interactivity */
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+	pointer-events: none;
+	}
+
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+
+/* visual tweaks */
+
+.leaflet-container {
+	background: #ddd;
+	outline-offset: 1px;
+	}
+.leaflet-container a {
+	color: #0078A8;
+	}
+.leaflet-zoom-box {
+	border: 2px dotted #38f;
+	background: rgba(255,255,255,0.5);
+	}
+
+
+/* general typography */
+.leaflet-container {
+	font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-size: 0.75rem;
+	line-height: 1.5;
+	}
+
+
+/* general toolbar styles */
+
+.leaflet-bar {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+	border-radius: 4px;
+	}
+.leaflet-bar a {
+	background-color: #fff;
+	border-bottom: 1px solid #ccc;
+	width: 26px;
+	height: 26px;
+	line-height: 26px;
+	display: block;
+	text-align: center;
+	text-decoration: none;
+	color: black;
+	}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+	display: block;
+	}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+	background-color: #f4f4f4;
+	}
+.leaflet-bar a:first-child {
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	}
+.leaflet-bar a:last-child {
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-bottom: none;
+	}
+.leaflet-bar a.leaflet-disabled {
+	cursor: default;
+	background-color: #f4f4f4;
+	color: #bbb;
+	}
+
+.leaflet-touch .leaflet-bar a {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	}
+.leaflet-touch .leaflet-bar a:first-child {
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	}
+.leaflet-touch .leaflet-bar a:last-child {
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	}
+
+/* zoom control */
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+	font: bold 18px 'Lucida Console', Monaco, monospace;
+	text-indent: 1px;
+	}
+
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out  {
+	font-size: 22px;
+	}
+
+
+/* layers control */
+
+.leaflet-control-layers {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+	background: #fff;
+	border-radius: 5px;
+	}
+.leaflet-control-layers-toggle {
+	background-image: url(images/layers.png);
+	width: 36px;
+	height: 36px;
+	}
+.leaflet-retina .leaflet-control-layers-toggle {
+	background-image: url(images/layers-2x.png);
+	background-size: 26px 26px;
+	}
+.leaflet-touch .leaflet-control-layers-toggle {
+	width: 44px;
+	height: 44px;
+	}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+	display: none;
+	}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+	display: block;
+	position: relative;
+	}
+.leaflet-control-layers-expanded {
+	padding: 6px 10px 6px 6px;
+	color: #333;
+	background: #fff;
+	}
+.leaflet-control-layers-scrollbar {
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-right: 5px;
+	}
+.leaflet-control-layers-selector {
+	margin-top: 2px;
+	position: relative;
+	top: 1px;
+	}
+.leaflet-control-layers label {
+	display: block;
+	font-size: 13px;
+	font-size: 1.08333em;
+	}
+.leaflet-control-layers-separator {
+	height: 0;
+	border-top: 1px solid #ddd;
+	margin: 5px -10px 5px -6px;
+	}
+
+/* Default icon URLs */
+.leaflet-default-icon-path { /* used only in path-guessing heuristic, see L.Icon.Default */
+	background-image: url(images/marker-icon.png);
+	}
+
+
+/* attribution and scale controls */
+
+.leaflet-container .leaflet-control-attribution {
+	background: #fff;
+	background: rgba(255, 255, 255, 0.8);
+	margin: 0;
+	}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+	padding: 0 5px;
+	color: #333;
+	line-height: 1.4;
+	}
+.leaflet-control-attribution a {
+	text-decoration: none;
+	}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+	text-decoration: underline;
+	}
+.leaflet-attribution-flag {
+	display: inline !important;
+	vertical-align: baseline !important;
+	width: 1em;
+	height: 0.6669em;
+	}
+.leaflet-left .leaflet-control-scale {
+	margin-left: 5px;
+	}
+.leaflet-bottom .leaflet-control-scale {
+	margin-bottom: 5px;
+	}
+.leaflet-control-scale-line {
+	border: 2px solid #777;
+	border-top: none;
+	line-height: 1.1;
+	padding: 2px 5px 1px;
+	white-space: nowrap;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.8);
+	text-shadow: 1px 1px #fff;
+	}
+.leaflet-control-scale-line:not(:first-child) {
+	border-top: 2px solid #777;
+	border-bottom: none;
+	margin-top: -2px;
+	}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+	border-bottom: 2px solid #777;
+	}
+
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	box-shadow: none;
+	}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	border: 2px solid rgba(0,0,0,0.2);
+	background-clip: padding-box;
+	}
+
+
+/* popup */
+
+.leaflet-popup {
+	position: absolute;
+	text-align: center;
+	margin-bottom: 20px;
+	}
+.leaflet-popup-content-wrapper {
+	padding: 1px;
+	text-align: left;
+	border-radius: 12px;
+	}
+.leaflet-popup-content {
+	margin: 13px 24px 13px 20px;
+	line-height: 1.3;
+	font-size: 13px;
+	font-size: 1.08333em;
+	min-height: 1px;
+	}
+.leaflet-popup-content p {
+	margin: 17px 0;
+	margin: 1.3em 0;
+	}
+.leaflet-popup-tip-container {
+	width: 40px;
+	height: 20px;
+	position: absolute;
+	left: 50%;
+	margin-top: -1px;
+	margin-left: -20px;
+	overflow: hidden;
+	pointer-events: none;
+	}
+.leaflet-popup-tip {
+	width: 17px;
+	height: 17px;
+	padding: 1px;
+
+	margin: -10px auto 0;
+	pointer-events: auto;
+
+	-webkit-transform: rotate(45deg);
+	   -moz-transform: rotate(45deg);
+	    -ms-transform: rotate(45deg);
+	        transform: rotate(45deg);
+	}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+	background: white;
+	color: #333;
+	box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+	}
+.leaflet-container a.leaflet-popup-close-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	border: none;
+	text-align: center;
+	width: 24px;
+	height: 24px;
+	font: 16px/24px Tahoma, Verdana, sans-serif;
+	color: #757575;
+	text-decoration: none;
+	background: transparent;
+	}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+	color: #585858;
+	}
+.leaflet-popup-scrolled {
+	overflow: auto;
+	}
+
+.leaflet-oldie .leaflet-popup-content-wrapper {
+	-ms-zoom: 1;
+	}
+.leaflet-oldie .leaflet-popup-tip {
+	width: 24px;
+	margin: 0 auto;
+
+	-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+	filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+	}
+
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+	border: 1px solid #999;
+	}
+
+
+/* div icon */
+
+.leaflet-div-icon {
+	background: #fff;
+	border: 1px solid #666;
+	}
+
+
+/* Tooltip */
+/* Base styles for the element that has a tooltip */
+.leaflet-tooltip {
+	position: absolute;
+	padding: 6px;
+	background-color: #fff;
+	border: 1px solid #fff;
+	border-radius: 3px;
+	color: #222;
+	white-space: nowrap;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+	}
+.leaflet-tooltip.leaflet-interactive {
+	cursor: pointer;
+	pointer-events: auto;
+	}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	position: absolute;
+	pointer-events: none;
+	border: 6px solid transparent;
+	background: transparent;
+	content: "";
+	}
+
+/* Directions */
+
+.leaflet-tooltip-bottom {
+	margin-top: 6px;
+}
+.leaflet-tooltip-top {
+	margin-top: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+	left: 50%;
+	margin-left: -6px;
+	}
+.leaflet-tooltip-top:before {
+	bottom: 0;
+	margin-bottom: -12px;
+	border-top-color: #fff;
+	}
+.leaflet-tooltip-bottom:before {
+	top: 0;
+	margin-top: -12px;
+	margin-left: -6px;
+	border-bottom-color: #fff;
+	}
+.leaflet-tooltip-left {
+	margin-left: -6px;
+}
+.leaflet-tooltip-right {
+	margin-left: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	top: 50%;
+	margin-top: -6px;
+	}
+.leaflet-tooltip-left:before {
+	right: 0;
+	margin-right: -12px;
+	border-left-color: #fff;
+	}
+.leaflet-tooltip-right:before {
+	left: 0;
+	margin-left: -12px;
+	border-right-color: #fff;
+	}
+
+/* Printing */
+
+@media print {
+	/* Prevent printers from removing background-images of controls. */
+	.leaflet-control {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+		}
+	}
+</style>
+<style>
+:root{
+  /* Layout: filter rail | map | ranked station list. Ink-teal base, maroon for hardship. */
+  --bg:#f3f5f4; --panel:#ffffff; --ink:#14211f; --muted:#5b6b68; --line:#dbe2e0;
+  --sea:#dfe9ec; --land0:#eef3f1; --accent:#0f6b63; --accent-soft:#d5ebe7;
+  --new:#0f6b63; --diff:#9c2f3a; --spec:#6a4aa8; --at:#8a6d1d;
+  --font-d:"Fraunces",Georgia,serif; --font-b:"IBM Plex Sans",system-ui,sans-serif; --font-m:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1615; --panel:#162120; --ink:#e4ecea; --muted:#93a5a1; --line:#2a3836;
+  --sea:#0c1a1d; --land0:#1b2827; --accent:#4fb3a7; --accent-soft:#1d3a36;
+  --new:#4fb3a7; --diff:#e0707b; --spec:#a98be6; --at:#d4b35a; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0f1615; --panel:#162120; --ink:#e4ecea; --muted:#93a5a1; --line:#2a3836;
+  --sea:#0c1a1d; --land0:#1b2827; --accent:#4fb3a7; --accent-soft:#1d3a36;
+  --new:#4fb3a7; --diff:#e0707b; --spec:#a98be6; --at:#d4b35a; color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--font-b);display:flex;flex-direction:column}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 28px;padding:14px 18px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font:600 22px/1.15 var(--font-d);margin:0;text-wrap:balance}
+.sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+.kpis{display:flex;gap:22px;margin-left:auto;flex-wrap:wrap}
+.kpi b{display:block;font:500 20px/1 var(--font-m);font-variant-numeric:tabular-nums}
+.kpi span{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.kpi.diff b{color:var(--diff)}
+main{flex:1;display:grid;grid-template-columns:270px 1fr 360px;min-height:0}
+aside,section.list{overflow:auto;background:var(--panel);min-height:0}
+aside{border-right:1px solid var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+section.list{border-left:1px solid var(--line);display:flex;flex-direction:column}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+select,input[type=search]{font:14px var(--font-b);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
+select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:12.5px var(--font-b);border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:4px 10px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.chip i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.chip[aria-pressed="false"]{opacity:.45}
+.chip .c{font-family:var(--font-m);font-size:11.5px;color:var(--muted)}
+button.reset{font:13px var(--font-b);border:1px solid var(--line);background:transparent;color:var(--accent);border-radius:6px;padding:6px 10px;cursor:pointer;align-self:flex-start}
+h2{font:600 12px var(--font-b);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 6px}
+.bars{display:flex;flex-direction:column;gap:3px}
+.bar{display:grid;grid-template-columns:96px 1fr 34px;gap:6px;align-items:center;font-size:12.5px;cursor:pointer;border-radius:4px;padding:1px 2px}
+.bar:hover{background:var(--accent-soft)}
+.bar .t{height:9px;background:var(--line);border-radius:2px;overflow:hidden;display:flex}
+.bar .t span{display:block;height:100%}
+.bar .n{font-family:var(--font-m);font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums}
+.bar.sel{background:var(--accent-soft);font-weight:600}
+#map{background:var(--sea);min-height:300px}
+.leaflet-container{font-family:var(--font-b);background:var(--sea)}
+.legend{background:var(--panel);color:var(--ink);padding:8px 10px;border-radius:6px;border:1px solid var(--line);font-size:12px;line-height:1.6}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.legend .dash{border:1.5px dashed var(--muted);background:transparent}
+.listhead{padding:12px 16px 10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px;position:sticky;top:0;background:var(--panel);z-index:2}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.items{padding:4px 0}
+.it{padding:9px 16px;border-bottom:1px solid var(--line);cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:2px 10px}
+.it:hover,.it.sel{background:var(--accent-soft)}
+.it .nm{font-weight:600;font-size:13.5px}
+.it .meta{color:var(--muted);font-size:12px;grid-column:1}
+.it .cnt{grid-row:1/3;grid-column:2;text-align:right;font:500 18px var(--font-m);align-self:center}
+.it .cnt small{display:block;font:11px var(--font-b);color:var(--muted)}
+.pill{display:inline-block;font-size:11px;border-radius:999px;padding:0 7px;margin-right:4px;border:1px solid currentColor}
+.p-New{color:var(--new)}.p-Difficult{color:var(--diff)}.p-Special{color:var(--spec)}.p-AT{color:var(--at)}
+.approx{font-size:11px;color:var(--muted);font-style:italic}
+.detail{padding:14px 16px;border-bottom:2px solid var(--accent);background:var(--bg)}
+.detail h3{font:600 17px/1.2 var(--font-d);margin:0 0 4px}
+.detail table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12.5px}
+.detail td{padding:4px 0;border-top:1px solid var(--line);vertical-align:top}
+.detail td.k{font-family:var(--font-m);text-align:right;width:30px}
+.close{float:right;border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1}
+.empty{padding:24px 16px;color:var(--muted)}
+.note{font-size:11.5px;color:var(--muted)}
+.tip{font:12.5px/1.4 var(--font-b)}
+.tip b{font-size:13px}
+@media (max-width:1100px){main{grid-template-columns:240px 1fr 320px}}
+@media (max-width:820px){
+  main{display:flex;flex-direction:column;overflow:auto}
+  #map{height:60vh;flex:none}
+  aside{border-right:none;border-bottom:1px solid var(--line)}
+  section.list{border-left:none;overflow:visible}
+  .kpis{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Preliminary grade vacancy map</h1>
+    <div class="sub">Ministry of Health draft vacancy list, October/November 2026 · 1,300 posts · source: uploaded PDF (draft)</div>
+  </div>
+  <div class="kpis" id="kpis"></div>
+</header>
+<main>
+  <aside>
+    <label class="f" for="q">Search station or designation
+      <input type="search" id="q" placeholder="e.g. Gampola, anaesthesia, ETU">
+    </label>
+    <div>
+      <h2>Vacancy type</h2>
+      <div class="chips" id="types"></div>
+    </div>
+    <label class="f" for="prov">Province
+      <select id="prov"></select>
+    </label>
+    <label class="f" for="dist">District / RDHS
+      <select id="dist"></select>
+    </label>
+    <label class="f" for="lvl">Institution level
+      <select id="lvl"></select>
+    </label>
+    <label class="f" for="role">Post group
+      <select id="role"></select>
+    </label>
+    <button class="reset" id="reset" type="button">Clear all filters</button>
+    <div>
+      <h2>By RDHS <span class="note">(click to filter)</span></h2>
+      <div class="bars" id="dbars"></div>
+    </div>
+    <div>
+      <h2>Top designations</h2>
+      <div class="bars" id="gbars"></div>
+    </div>
+  </aside>
+  <div id="map" role="region" aria-label="Map of vacancies by station"></div>
+  <section class="list">
+    <div class="listhead">
+      <div class="row2">
+        <label class="f" for="from">Distance from
+          <select id="from"></select>
+        </label>
+        <label class="f" for="sort">Sort stations by
+          <select id="sort">
+            <option value="n">Most vacancies</option>
+            <option value="d">Nearest first</option>
+            <option value="a">Name A–Z</option>
+          </select>
+        </label>
+      </div>
+      <div class="note" id="listnote"></div>
+    </div>
+    <div id="detail"></div>
+    <div class="items" id="items"></div>
+  </section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>const DATA={"inst":[["BAMBARADENIYA MOH","KANDY","Central",7.2988,80.703,0,"Kandy RDHS area","MOH Office"],["DELTOTA DH","KANDY","Central",7.17267,80.70157,1,"Deltota","Divisional Hospital"],["DELTOTA SISILA MENTAL REHABILITATION CENTRE","KANDY","Central",7.17267,80.70157,1,"Deltota","Specialised / Other"],["DOLOSBAGE DH","KANDY","Central",7.08608,80.46046,1,"Dolosbage","Divisional Hospital"],["ELAMALDENIYA PMCU","KANDY","Central",7.2501,80.5695,0,"Kandy RDHS area","Primary Medical Care Unit"],["GAMPOLA BH","KANDY","Central",7.1643,80.5696,1,"Gampola","Base Hospital"],["GAMPOLA UDAPALATHA MOH","KANDY","Central",7.1643,80.5696,1,"Gampola","MOH Office"],["HASALAKA DH","KANDY","Central",7.353,80.953,1,"Hasalaka","Divisional Hospital"],["KANDY KAHAWATTA DH","KANDY","Central",7.2955,80.6356,1,"Kandy","Divisional Hospital"],["KANDY NATIONAL HOSPITAL","KANDY","Central",7.2955,80.6356,1,"Kandy","National Hospital"],["KANDY RDHS","KANDY","Central",7.2955,80.6356,1,"Kandy","RDHS Office"],["KOTIKAMBE PMCU","KANDY","Central",7.3658,80.7524,0,"Kandy RDHS area","Primary Medical Care Unit"],["KURUNDUWATHTHA DH","KANDY","Central",7.3756,80.7095,0,"Kandy RDHS area","Divisional Hospital"],["MAKULDENIYA RANGALA PMCU","KANDY","Central",7.34042,80.77963,1,"Makuldeniya","Primary Medical Care Unit"],["MAPAKANDA PMCU","KANDY","Central",7.23017,80.60771,1,"Mapakanda","Primary Medical Care Unit"],["MEDAMAHANUWARA DH","KANDY","Central",7.28646,80.81702,1,"Medamahanuwara","Divisional Hospital"],["NAWALAPITIYA DGH","KANDY","Central",7.0447,80.51606,1,"Nawalapitiya","District General Hospital"],["PERADENIYA SIRIMAVO BANDARANAYAKE SPECIAL CHILDREN S HOSPITAL","KANDY","Central",7.26987,80.59383,1,"Peradeniya","Specialised / Other"],["PERADENIYA TEACHING HOSPITAL","KANDY","Central",7.26987,80.59383,1,"Peradeniya","Teaching Hospital"],["SANGARAJAPURA DH","KANDY","Central",7.32173,80.51825,1,"Sangarajapura","Divisional Hospital"],["THELDENIYA BH","KANDY","Central",7.31538,80.74493,1,"Teldeniya","Base Hospital"],["THITTAPAJJALA JAYAWICKRAMA DH","KANDY","Central",7.3674,80.6936,0,"Kandy RDHS area","Divisional Hospital"],["UDAGAMA ATABAGE DH","KANDY","Central",7.13773,80.61106,1,"Atabage","Divisional Hospital"],["UDATHALAWINNA PMCU","KANDY","Central",7.34175,80.65073,1,"Udatalawinna","Primary Medical Care Unit"],["ULAPANE DH","KANDY","Central",7.09876,80.56051,1,"Ulapane","Divisional Hospital"],["DAMBULLA BH","MATALE","Central",7.86,80.65167,1,"Dambulla","Base Hospital"],["DEWAHUWA DH","MATALE","Central",7.84386,80.57856,1,"Dewahuwa","Divisional Hospital"],["GALEWELA DH","MATALE","Central",7.7565,80.57717,1,"Galewela","Divisional Hospital"],["GURUBEBILA PMCU","MATALE","Central",7.5642,80.6966,0,"Matale RDHS area","Primary Medical Care Unit"],["ILLUKKUMBURA DH","MATALE","Central",7.54413,80.80179,1,"Illukkumbura","Divisional Hospital"],["LAGGALA PALLEGAMA DH","MATALE","Central",7.59653,80.83678,1,"Laggala Pallegama","Divisional Hospital"],["MATALE DGH","MATALE","Central",7.46746,80.62342,1,"Matale","District General Hospital"],["MATALE HETTIPOLA DH","MATALE","Central",7.46746,80.62342,1,"Matale","Divisional Hospital"],["MATALE RDHS","MATALE","Central",7.46746,80.62342,1,"Matale","RDHS Office"],["MATALE STD AIDS CONTROL PROGRAMME","MATALE","Central",7.46746,80.62342,1,"Matale","Specialised / Other"],["MUWANDENIYA DH","MATALE","Central",7.45476,80.64098,1,"Muwandeniya","Divisional Hospital"],["RATHTHOTA DH","MATALE","Central",7.51727,80.67153,1,"Rattota","Divisional Hospital"],["AGARAPATHANA DH","NUWARA ELIYA","Central",6.86724,80.71218,1,"Agarapathana","Divisional Hospital"],["BOGAWANTHALAWA DH","NUWARA ELIYA","Central",6.79723,80.67569,1,"Bogawantalawa","Divisional Hospital"],["DAYAGAMA WEST DH","NUWARA ELIYA","Central",6.9349,80.773,0,"Nuwara Eliya RDHS area","Divisional Hospital"],["DICKOYA BH","NUWARA ELIYA","Central",6.87513,80.60068,1,"Dikoya","Base Hospital"],["GONAGAHATENNA DH","NUWARA ELIYA","Central",6.99,80.88,0,"Nuwara Eliya RDHS area","Divisional Hospital"],["HANGARAPITIYA PMCU","NUWARA ELIYA","Central",6.92041,80.47256,1,"Hangarapitiya","Primary Medical Care Unit"],["HANGURANKETHA DH","NUWARA ELIYA","Central",7.166,80.781,1,"Hanguranketha","Divisional Hospital"],["HAPUGASTALAWA PMCU","NUWARA ELIYA","Central",7.05781,80.57301,1,"Hapugasthalawa","Primary Medical Care Unit"],["HIGH FOREST DH","NUWARA ELIYA","Central",6.9704,80.7906,0,"Nuwara Eliya RDHS area","Divisional Hospital"],["KOTAGALA DH","NUWARA ELIYA","Central",6.92968,80.60494,1,"Kotagala","Divisional Hospital"],["KOTHMALE MOH","NUWARA ELIYA","Central",7.02231,80.59106,1,"Kotmale","MOH Office"],["LAXAPANA DH","NUWARA ELIYA","Central",6.92476,80.49105,1,"Laxapana","Divisional Hospital"],["LINDULA DH","NUWARA ELIYA","Central",6.9019,80.67165,1,"Lindula","Divisional Hospital"],["MADULLA DH","NUWARA ELIYA","Central",7.01944,80.9213,1,"Madulla","Divisional Hospital"],["MALDENIYA DH","NUWARA ELIYA","Central",6.9756,80.6675,0,"Nuwara Eliya RDHS area","Divisional Hospital"],["MANAKOLA PMCU","NUWARA ELIYA","Central",6.9556,80.7069,0,"Nuwara Eliya RDHS area","Primary Medical Care Unit"],["MANDARAMNUWARA DH","NUWARA ELIYA","Central",7.04201,80.77963,1,"Mandaram Nuwara","Divisional Hospital"],["MASKELIYA DH","NUWARA ELIYA","Central",6.83293,80.57093,1,"Maskeliya","Divisional Hospital"],["MULOYA DH","NUWARA ELIYA","Central",6.8914,80.7766,0,"Nuwara Eliya RDHS area","Divisional Hospital"],["MUNWATTA PMCU","NUWARA ELIYA","Central",7.11579,80.81148,1,"Munwatta","Primary Medical Care Unit"],["NANUOYA PMCU","NUWARA ELIYA","Central",6.94032,80.74084,1,"Nanuoya","Primary Medical Care Unit"],["NILDANDAHINNA DH","NUWARA ELIYA","Central",7.08012,80.89174,1,"Nildandahinna","Divisional Hospital"],["NUWARA ELIYA DGH","NUWARA ELIYA","Central",6.97078,80.78286,1,"Nuwara Eliya","District General Hospital"],["NUWARA ELIYA MOH","NUWARA ELIYA","Central",6.97078,80.78286,1,"Nuwara Eliya","MOH Office"],["NUWARA ELIYA RDHS","NUWARA ELIYA","Central",6.97078,80.78286,1,"Nuwara Eliya","RDHS Office"],["NUWARA ELIYA STD CLINIC","NUWARA ELIYA","Central",6.97078,80.78286,1,"Nuwara Eliya","Specialised / Other"],["PUNDALUOYA PMCU","NUWARA ELIYA","Central",7.01313,80.66321,1,"Pundaluoya","Primary Medical Care Unit"],["RAGALA MOH","NUWARA ELIYA","Central",7.024,80.7966,0,"Nuwara Eliya RDHS area","MOH Office"],["RAMBODA KOTMALE DH","NUWARA ELIYA","Central",7.05655,80.69385,1,"Ramboda","Divisional Hospital"],["RIKILLAGASKADA BH","NUWARA ELIYA","Central",7.14865,80.79071,1,"Rikillagaskada","Base Hospital"],["THERIPAHA DH","NUWARA ELIYA","Central",7.11404,80.91443,1,"Teripeha","Divisional Hospital"],["WATAWALA DH","NUWARA ELIYA","Central",6.94495,80.53898,1,"Watawala","Divisional Hospital"],["AMPARA CHEST CLINIC","AMPARA","Eastern",7.29754,81.68202,1,"Ampara","Specialised / Other"],["AMPARA DGH","AMPARA","Eastern",7.29754,81.68202,1,"Ampara","District General Hospital"],["DAMANA DH","AMPARA","Eastern",7.2547,81.5982,0,"Ampara RDHS area","Divisional Hospital"],["DEHIATTAKANDIYA BH","AMPARA","Eastern",7.67128,81.04648,1,"Dehiattakandiya","Base Hospital"],["KOKNAHARA PMCU","AMPARA","Eastern",7.22391,81.56235,1,"Koknahara","Primary Medical Care Unit"],["KOLOMANTHALAWA PMCU","AMPARA","Eastern",7.29429,81.27941,1,"Kolamanthalawa","Primary Medical Care Unit"],["LAHUGALA DH","AMPARA","Eastern",6.87209,81.72263,1,"Lahugala","Divisional Hospital"],["MAHA OYA MOH","AMPARA","Eastern",7.53122,81.3561,1,"Mahaoya","MOH Office"],["MAHAOYA BH","AMPARA","Eastern",7.53122,81.3561,1,"Mahaoya","Base Hospital"],["NAMALOYA PMCU","AMPARA","Eastern",7.33119,81.53221,1,"Namaloya","Primary Medical Care Unit"],["PADIYATALAWA DH","AMPARA","Eastern",7.39251,81.24362,1,"Padiyatalawa","Divisional Hospital"],["PADIYATALAWA MOH","AMPARA","Eastern",7.39251,81.24362,1,"Padiyatalawa","MOH Office"],["PADIYATHALAWA DH","AMPARA","Eastern",7.39251,81.24362,1,"Padiyatalawa","Divisional Hospital"],["PANAMA DH","AMPARA","Eastern",6.75806,81.80877,1,"Panama","Divisional Hospital"],["PANNALGAMA PMCU","AMPARA","Eastern",7.30176,81.67473,1,"Pannalagama","Primary Medical Care Unit"],["SENARATHPURA DH","AMPARA","Eastern",7.3332,81.5794,0,"Ampara RDHS area","Divisional Hospital"],["THOTTAMA DH","AMPARA","Eastern",7.3056,81.6498,0,"Ampara RDHS area","Divisional Hospital"],["UHANA PMCU","AMPARA","Eastern",7.36304,81.63528,1,"Uhana","Primary Medical Care Unit"],["WEERAGODA PMCU","AMPARA","Eastern",7.1909,81.6838,0,"Ampara RDHS area","Primary Medical Care Unit"],["BATTICALOA TEACHING HOSPITAL","BATTICALOA","Eastern",7.7102,81.6924,1,"Batticaloa","Teaching Hospital"],["CHEDDIPALAYAM DH","BATTICALOA","Eastern",7.57957,81.78493,1,"Cheddipalayam","Divisional Hospital"],["CHENKALADY DH","BATTICALOA","Eastern",7.78586,81.5898,1,"Chenkaladi","Divisional Hospital"],["ERAVUR BH","BATTICALOA","Eastern",7.7769,81.6042,1,"Eravur","Base Hospital"],["KALUWANCHIKUDY BH","BATTICALOA","Eastern",7.52937,81.79461,1,"Kaluwanchikudi","Base Hospital"],["KANGEYANNODDI KANYANODAI PMCU","BATTICALOA","Eastern",7.7503,81.6694,0,"Batticaloa RDHS area","Primary Medical Care Unit"],["KARADIYANARU DH","BATTICALOA","Eastern",7.70075,81.53839,1,"Karadiyanaru","Divisional Hospital"],["KATHIRAVELY DH","BATTICALOA","Eastern",8.22288,81.40386,1,"Kathiraveli","Divisional Hospital"],["KATTANKUDY BH","BATTICALOA","Eastern",7.68537,81.72601,1,"Kattankudi","Base Hospital"],["KAWATTAMUNAI PMCU","BATTICALOA","Eastern",7.7285,81.5951,0,"Batticaloa RDHS area","Primary Medical Care Unit"],["KOKKODICHOLAI MAHILADITHIVU DH","BATTICALOA","Eastern",7.61606,81.71032,1,"Kokkaddicholai","Divisional Hospital"],["MAHILAVEDDUVAN PMCU","BATTICALOA","Eastern",7.6113,81.6294,0,"Batticaloa RDHS area","Primary Medical Care Unit"],["MANDAPATHADY DH","BATTICALOA","Eastern",7.7603,81.6826,0,"Batticaloa RDHS area","Divisional Hospital"],["MANKERNEY PMCU","BATTICALOA","Eastern",7.6724,81.7205,0,"Batticaloa RDHS area","Primary Medical Care Unit"],["MAVADIVAMBU VANTHARAMOOLAI DH","BATTICALOA","Eastern",7.79059,81.5569,1,"Vantharumoolai","Divisional Hospital"],["NAWALKADU DH","BATTICALOA","Eastern",7.7058,81.6519,0,"Batticaloa RDHS area","Divisional Hospital"],["PALAMENAMADU DH","BATTICALOA","Eastern",7.6556,81.7179,0,"Batticaloa RDHS area","Divisional Hospital"],["PALAYADIVADDAI PMCU","BATTICALOA","Eastern",7.7721,81.6491,0,"Batticaloa RDHS area","Primary Medical Care Unit"],["PANCHENAI PMCU","BATTICALOA","Eastern",7.6335,81.6974,0,"Batticaloa RDHS area","Primary Medical Care Unit"],["PERIYAPULLUMAI PMCU","BATTICALOA","Eastern",7.58168,81.46086,1,"Periyapullumalai","Primary Medical Care Unit"],["THURAINEELAVANAI DH","BATTICALOA","Eastern",7.44731,81.79921,1,"Thuraineelavanai","Divisional Hospital"],["VAKARAI MOH","BATTICALOA","Eastern",8.13691,81.43408,1,"Vakarai","MOH Office"],["VALAICHCHENAI BH","BATTICALOA","Eastern",7.92133,81.52467,1,"Valaichenai","Base Hospital"],["AKKARAIPATTU BH","KALMUNAI","Eastern",7.21843,81.85412,1,"Akkaraipattu","Base Hospital"],["ALAMKULAM PMCU","KALMUNAI","Eastern",7.3832,81.8108,0,"Kalmunai RDHS area","Primary Medical Care Unit"],["IRAKKAMAM MOH","KALMUNAI","Eastern",7.24424,81.74588,1,"Irakkamam","MOH Office"],["KALMUNAI CENTRAL CAMP DH","KALMUNAI","Eastern",7.40902,81.83472,1,"Kalmunai","Divisional Hospital"],["KALMUNAI NORTH BH","KALMUNAI","Eastern",7.40902,81.83472,1,"Kalmunai","Base Hospital"],["KALMUNAI RDHS","KALMUNAI","Eastern",7.40902,81.83472,1,"Kalmunai","RDHS Office"],["KALMUNAI SOUTH ASHROFF MEMORIAL HOSPITAL","KALMUNAI","Eastern",7.40902,81.83472,1,"Kalmunai","Specialised / Other"],["KOMARI PMCU","KALMUNAI","Eastern",6.98626,81.86478,1,"Komari","Primary Medical Care Unit"],["MALWATTA DH","KALMUNAI","Eastern",7.3039,81.7312,0,"Kalmunai RDHS area","Divisional Hospital"],["MAWADIPALLI PMCU","KALMUNAI","Eastern",7.3391,81.754,0,"Kalmunai RDHS area","Primary Medical Care Unit"],["NINTAVUR BH","KALMUNAI","Eastern",7.32117,81.85785,1,"Nintavur","Base Hospital"],["PANANKADU DH","KALMUNAI","Eastern",7.3706,81.7276,0,"Kalmunai RDHS area","Divisional Hospital"],["POTTUVIL BH","KALMUNAI","Eastern",6.87527,81.83063,1,"Pottuvil","Base Hospital"],["SAMMANTHURAI BH","KALMUNAI","Eastern",7.35748,81.79511,1,"Samanthurai","Base Hospital"],["SAMMANTHURAI MOH","KALMUNAI","Eastern",7.35748,81.79511,1,"Samanthurai","MOH Office"],["SENNELKIRAMAM DH","KALMUNAI","Eastern",7.2891,81.7513,0,"Kalmunai RDHS area","Divisional Hospital"],["SORIKALMUNAI PMCU","KALMUNAI","Eastern",7.3134,81.8023,0,"Kalmunai RDHS area","Primary Medical Care Unit"],["THIRUKKOVIL BH","KALMUNAI","Eastern",7.11531,81.85249,1,"Tirukovil","Base Hospital"],["EACHCHILAMPATHTHU DH","TRINCOMALEE","Eastern",8.58736,81.21521,1,"Echchilampattai","Divisional Hospital"],["GOMARANKADAWELA DH","TRINCOMALEE","Eastern",8.67504,80.96324,1,"Gomarankadawala","Divisional Hospital"],["GOMARANKADAWELA MOH","TRINCOMALEE","Eastern",8.67504,80.96324,1,"Gomarankadawala","MOH Office"],["ILANGAI THURAIMUHATHTHUVARAM PMCU","TRINCOMALEE","Eastern",8.6686,81.1279,0,"Trincomalee RDHS area","Primary Medical Care Unit"],["KANTALE BH","TRINCOMALEE","Eastern",8.35126,81.00699,1,"Kantalai","Base Hospital"],["KINNIYA BH","TRINCOMALEE","Eastern",8.50255,81.18038,1,"Kinniya","Base Hospital"],["MAHADIVULWEWA DH","TRINCOMALEE","Eastern",8.61739,80.96428,1,"Mahadivulwewa","Divisional Hospital"],["MANALCHENAI PMCU","TRINCOMALEE","Eastern",8.4844,81.1528,0,"Trincomalee RDHS area","Primary Medical Care Unit"],["MUTHUR BH","TRINCOMALEE","Eastern",8.45791,81.2684,1,"Mutur","Base Hospital"],["PULMODAI BH","TRINCOMALEE","Eastern",8.94455,80.98267,1,"Pulmoddai","Base Hospital"],["SAMPOOR DH","TRINCOMALEE","Eastern",8.48224,81.28938,1,"Sampoor","Divisional Hospital"],["SERUNUWARA DH","TRINCOMALEE","Eastern",8.32497,81.30074,1,"Serunuwara","Divisional Hospital"],["SERUWILA DH","TRINCOMALEE","Eastern",8.37057,81.31991,1,"Seruwila","Divisional Hospital"],["THAMPALAGAMAM DH","TRINCOMALEE","Eastern",8.49738,81.09202,1,"Tampalakamam","Divisional Hospital"],["THAMPALAGAMAM MOH","TRINCOMALEE","Eastern",8.49738,81.09202,1,"Tampalakamam","MOH Office"],["TRINCOMALEE DGH","TRINCOMALEE","Eastern",8.58736,81.21521,1,"Trincomalee","District General Hospital"],["TRINCOMALEE RDHS","TRINCOMALEE","Eastern",8.58736,81.21521,1,"Trincomalee","RDHS Office"],["WAN ELA DH","TRINCOMALEE","Eastern",8.38174,81.07961,1,"Wanela","Divisional Hospital"],["ANDIYAGALA DH","ANURADHAPURA","North Central",8.2,80.3871,0,"Anuradhapura RDHS area","Divisional Hospital"],["ANURADHAPURA RDHS","ANURADHAPURA","North Central",8.31135,80.40365,1,"Anuradhapura","RDHS Office"],["ANURADHAPURA TEACHING HOSPITAL","ANURADHAPURA","North Central",8.31135,80.40365,1,"Anuradhapura","Teaching Hospital"],["EPPAWALA DH","ANURADHAPURA","North Central",8.1441,80.41187,1,"Eppawala","Divisional Hospital"],["GALKIRIYAGAMA DH","ANURADHAPURA","North Central",7.92635,80.57188,1,"Galkiriyagama","Divisional Hospital"],["GAMBIRIGASWEWA PMCU","ANURADHAPURA","North Central",8.48076,80.3937,1,"Gambirigaswewa","Primary Medical Care Unit"],["HABARANA DH","ANURADHAPURA","North Central",8.03221,80.75193,1,"Habarana","Divisional Hospital"],["HURULUWEWA DH","ANURADHAPURA","North Central",8.2078,80.3048,0,"Anuradhapura RDHS area","Divisional Hospital"],["KAHATAGASDIGILIYA BH","ANURADHAPURA","North Central",8.42598,80.68725,1,"Kahatagasdigiliya","Base Hospital"],["KAPUGOLLEWA DH","ANURADHAPURA","North Central",8.2929,80.4814,0,"Anuradhapura RDHS area","Divisional Hospital"],["KATIYAWA DH","ANURADHAPURA","North Central",8.2207,80.3366,0,"Anuradhapura RDHS area","Divisional Hospital"],["KEBITIGOLLEWA BH","ANURADHAPURA","North Central",8.64089,80.66968,1,"Kebithigollewa","Base Hospital"],["KEKIRAWA BH","ANURADHAPURA","North Central",8.0421,80.59383,1,"Kekirawa","Base Hospital"],["MAHAWILACHCHIYA DH","ANURADHAPURA","North Central",8.47076,80.20982,1,"Mahawilachchiya","Divisional Hospital"],["MARADANKADAWALA DH","ANURADHAPURA","North Central",8.11687,80.56051,1,"Maradankadawala","Divisional Hospital"],["MEDAWACHCHIYA BH","ANURADHAPURA","North Central",8.53748,80.49098,1,"Medawachchiya","Base Hospital"],["MIHINTALE MOH","ANURADHAPURA","North Central",8.35342,80.50494,1,"Mihintale","MOH Office"],["NACHCHADUWA DH","ANURADHAPURA","North Central",8.2555,80.48271,1,"Nachchaduwa","Divisional Hospital"],["NEGAMPAHA DH","ANURADHAPURA","North Central",7.95786,80.51122,1,"Negampaha","Divisional Hospital"],["NOCHCHIYAGAMA DH","ANURADHAPURA","North Central",8.29255,80.22655,1,"Nochchiyagama","Divisional Hospital"],["PADAVIYA BH","ANURADHAPURA","North Central",8.8341,80.76074,1,"Padaviya","Base Hospital"],["PALUGASWEWA MOH","ANURADHAPURA","North Central",8.06044,80.68817,1,"Palugaswewa","MOH Office"],["RAJANGANAYA MOH","ANURADHAPURA","North Central",8.16572,80.19644,1,"Rajanganaya","MOH Office"],["RAJANGANAYA TR 11 DH","ANURADHAPURA","North Central",8.16572,80.19644,1,"Rajanganaya","Divisional Hospital"],["RANORAWA DH","ANURADHAPURA","North Central",8.3416,80.5105,0,"Anuradhapura RDHS area","Divisional Hospital"],["THAMBUTTEGAMA BH","ANURADHAPURA","North Central",8.154,80.3046,1,"Tambuttegama","Base Hospital"],["THANTIRIMALE DH","ANURADHAPURA","North Central",8.57228,80.25722,1,"Tantirimale","Divisional Hospital"],["WAHALKADA DH","ANURADHAPURA","North Central",8.72249,80.83501,1,"Wahalkada","Divisional Hospital"],["ARALAGANWILA DH","POLONNARUWA","North Central",7.78278,81.18454,1,"Aralaganwila","Divisional Hospital"],["ASELAPURA PMCU","POLONNARUWA","North Central",7.8982,81.0044,0,"Polonnaruwa RDHS area","Primary Medical Care Unit"],["BAKAMUNA DH","POLONNARUWA","North Central",7.7806,80.8184,1,"Bakamuna","Divisional Hospital"],["BOGASWEWA (MEDAGAMA) PMCU","POLONNARUWA","North Central",7.9533,81.0682,0,"Polonnaruwa RDHS area","Primary Medical Care Unit"],["DIYABEDUMA DH","POLONNARUWA","North Central",7.92974,80.87099,1,"Diyabeduma","Divisional Hospital"],["GALOYA JUNCTION PMCU","POLONNARUWA","North Central",7.8455,81.0145,0,"Polonnaruwa RDHS area","Primary Medical Care Unit"],["HINGURAKGODA BH","POLONNARUWA","North Central",8.04159,80.95324,1,"Hingurakgoda","Base Hospital"],["JAYANTHIPURA DH","POLONNARUWA","North Central",7.94832,81.00178,1,"Jayanthipura","Divisional Hospital"],["MEDIRIGIRIYA BH","POLONNARUWA","North Central",8.13964,80.96777,1,"Medirigiriya","Base Hospital"],["POLONNARUWA DGH","POLONNARUWA","North Central",7.93965,81.00274,1,"Polonnaruwa","District General Hospital"],["POLONNARUWA RENAL HOSPITAL","POLONNARUWA","North Central",7.93965,81.00274,1,"Polonnaruwa","Specialised / Other"],["PULASTHIGAMA (BOP 400) DH","POLONNARUWA","North Central",8.0422,81.08098,1,"Pulastigama","Divisional Hospital"],["WELIKANDA BH","POLONNARUWA","North Central",7.94597,81.24913,1,"Welikanda","Base Hospital"],["DAMBADENIYA BH","KURUNEGALA","North Western",7.36971,80.15123,1,"Dambadeniya","Base Hospital"],["GALGAMUWA BH","KURUNEGALA","North Western",7.98649,80.28788,1,"Galgamuwa","Base Hospital"],["HIRUWALPOLA PMCU","KURUNEGALA","North Western",7.54778,79.93746,1,"Hiruwalpola","Primary Medical Care Unit"],["KADIGAWA PMCU","KURUNEGALA","North Western",7.7192,80.00071,1,"Kadigawa","Primary Medical Care Unit"],["KALEGAMA PMCU","KURUNEGALA","North Western",7.3873,80.4035,0,"Kurunegala RDHS area","Primary Medical Care Unit"],["KULIYAPITIYA TEACHING HOSPITAL","KURUNEGALA","North Western",7.47212,80.04462,1,"Kuliyapitiya","Teaching Hospital"],["KURUNEGALA TEACHING HOSPITAL","KURUNEGALA","North Western",7.4863,80.3623,1,"Kurunegala","Teaching Hospital"],["MEEGALEWA DH","KURUNEGALA","North Western",8.05272,80.35473,1,"Meegalawa","Divisional Hospital"],["NETIYA PMCU","KURUNEGALA","North Western",7.5853,80.4328,0,"Kurunegala RDHS area","Primary Medical Care Unit"],["NIKAWERATIYA BH","KURUNEGALA","North Western",7.75544,80.11914,1,"Nikaweratiya","Base Hospital"],["PAHALAGIRIBAWA DH","KURUNEGALA","North Western",8.11756,80.19169,1,"Pahalagiribawa","Divisional Hospital"],["PANSIYAGAMA PMCU","KURUNEGALA","North Western",7.73521,80.49687,1,"Pansiyagama","Primary Medical Care Unit"],["RAJANGANAYA DH","KURUNEGALA","North Western",8.16572,80.19644,1,"Rajanganaya","Divisional Hospital"],["THALAWA MORAGOLLAGAMA PMCU","KURUNEGALA","North Western",7.547,80.3597,0,"Kurunegala RDHS area","Primary Medical Care Unit"],["TISOGAMA PMCU","KURUNEGALA","North Western",7.4098,80.4344,0,"Kurunegala RDHS area","Primary Medical Care Unit"],["ALUTHGAMA PMCU","PUTTALAM","North Western",7.56667,79.9,1,"Alutgama","Primary Medical Care Unit"],["ANAMADUWA BH","PUTTALAM","North Western",7.87777,80.01112,1,"Anamaduwa","Base Hospital"],["CHILAW DGH","PUTTALAM","North Western",7.57583,79.79528,1,"Chilaw","District General Hospital"],["GALMURUWA DH","PUTTALAM","North Western",7.50282,79.89968,1,"Galmuruwa","Divisional Hospital"],["KALPITIYA BH","PUTTALAM","North Western",8.2295,79.759,1,"Kalpitiya","Base Hospital"],["MAHAKUMBUKKADAWALA DH","PUTTALAM","North Western",7.84788,79.88568,1,"Mahakumbukkadawala","Divisional Hospital"],["MAMPOORI PMCU","PUTTALAM","North Western",8.00354,79.74073,1,"Mampuri","Primary Medical Care Unit"],["MUNDALAMA DH","PUTTALAM","North Western",7.9756,79.7745,0,"Puttalam RDHS area","Divisional Hospital"],["PUTTALAM BH","PUTTALAM","North Western",8.0362,79.8283,1,"Puttalam","Base Hospital"],["PUTTALAM RDHS","PUTTALAM","North Western",8.0362,79.8283,1,"Puttalam","RDHS Office"],["THABBOWA DH","PUTTALAM","North Western",8.08612,79.92636,1,"Tabbowa","Divisional Hospital"],["ALAVEDDY DH","JAFFNA","Northern",9.6615,80.02555,1,"Allaveddi","Divisional Hospital"],["CHAVAKACHCHERI BH","JAFFNA","Northern",9.66646,80.13209,1,"Chavakachcheri","Base Hospital"],["JAFFNA TEACHING HOSPITAL","JAFFNA","Northern",9.66901,80.02695,1,"Jaffna","Teaching Hospital"],["KAYTS BH","JAFFNA","Northern",9.69789,79.86048,1,"Kayts","Base Hospital"],["KAYTS MOH","JAFFNA","Northern",9.69789,79.86048,1,"Kayts","MOH Office"],["MARUTHANKERNEY DH","JAFFNA","Northern",9.7509,80.0965,0,"Jaffna RDHS area","Divisional Hospital"],["NAINATIVU DH","JAFFNA","Northern",9.61901,79.77488,1,"Nainathivu","Divisional Hospital"],["POINT PEDRO BH","JAFFNA","Northern",9.79379,80.22098,1,"Point Pedro","Base Hospital"],["PUNGUDUTIVU DH","JAFFNA","Northern",9.58965,79.82407,1,"Pungudutivu","Divisional Hospital"],["UDUVIL MOH","JAFFNA","Northern",9.732,80.013,1,"Uduvil","MOH Office"],["VELANAI ISLAND SOUTH MOH","JAFFNA","Northern",9.63724,79.90108,1,"Velanai","MOH Office"],["AKKARAYAN KULAM DH","KILINOCHCHI","Northern",9.32615,80.30181,1,"Akkarayankulam","Divisional Hospital"],["JAYAPURAM PMCU","KILINOCHCHI","Northern",9.4617,80.3941,0,"Kilinochchi RDHS area","Primary Medical Care Unit"],["KANDAWALAI PMCU","KILINOCHCHI","Northern",9.4091,80.52187,1,"Kandavalai","Primary Medical Care Unit"],["KILINOCHCHI CHEST CLINIC","KILINOCHCHI","Northern",9.3961,80.3982,1,"Kilinochchi","Specialised / Other"],["KILINOCHCHI DGH","KILINOCHCHI","Northern",9.3961,80.3982,1,"Kilinochchi","District General Hospital"],["KILINOCHCHI RDHS","KILINOCHCHI","Northern",9.3961,80.3982,1,"Kilinochchi","RDHS Office"],["KILINOCHCHI STD CLINIC","KILINOCHCHI","Northern",9.3961,80.3982,1,"Kilinochchi","Specialised / Other"],["MULANKAVIL BH","KILINOCHCHI","Northern",9.4167,80.4709,0,"Kilinochchi RDHS area","Base Hospital"],["THARMAPURAM DH","KILINOCHCHI","Northern",9.41065,80.52336,1,"Tharmapuram","Divisional Hospital"],["VADDAKACHCHI DH","KILINOCHCHI","Northern",9.36139,80.46667,1,"Vaddakachchi","Divisional Hospital"],["ADAMPAN DH","MANNAR","Northern",8.93257,79.99759,1,"Adampan","Divisional Hospital"],["CHILAVATURAI DH","MANNAR","Northern",8.74501,79.95424,1,"Chilavathurai","Divisional Hospital"],["KEERISUTTAN PMCU","MANNAR","Northern",8.9408,79.9762,0,"Mannar RDHS area","Primary Medical Care Unit"],["MADHU MOH","MANNAR","Northern",8.854,80.203,1,"Madhu","MOH Office"],["MANNAR ANTI MALARIA CAMPAIGN REGIONAL OFFICE","MANNAR","Northern",8.98097,79.90441,1,"Mannar","Specialised / Other"],["MANNAR DGH","MANNAR","Northern",8.98097,79.90441,1,"Mannar","District General Hospital"],["MANNAR MENTAL HEALTH CENTER","MANNAR","Northern",8.98097,79.90441,1,"Mannar","Specialised / Other"],["MANNAR RDHS","MANNAR","Northern",8.98097,79.90441,1,"Mannar","RDHS Office"],["MURUNKAN BH","MANNAR","Northern",8.8328,80.03393,1,"Murunkan","Base Hospital"],["MUSALI MOH","MANNAR","Northern",8.9573,80.0112,0,"Mannar RDHS area","MOH Office"],["NANATTAN DH","MANNAR","Northern",8.8371,79.96911,1,"Nanattan","Divisional Hospital"],["PERIYAPANDIVIRICHAN DH","MANNAR","Northern",8.96486,79.91828,1,"Periyapandivirichchan","Divisional Hospital"],["PESALAI DH","MANNAR","Northern",9.08283,79.81006,1,"Pesalai","Divisional Hospital"],["THALAIMANNAR DH","MANNAR","Northern",9.08343,79.73438,1,"Thalaimannar","Divisional Hospital"],["THARAPURAM PMCU","MANNAR","Northern",9.01238,79.87588,1,"Tharapuram","Primary Medical Care Unit"],["VANKALAI DH","MANNAR","Northern",8.8941,79.93466,1,"Vankalai","Divisional Hospital"],["VELLANKULAM PMCU","MANNAR","Northern",9.18609,80.12648,1,"Vellankulam","Primary Medical Care Unit"],["VIDATHALTIVU DH","MANNAR","Northern",9.02155,80.05086,1,"Vidataltivu","Divisional Hospital"],["ALAMPIL DH","MULLAITIVU","Northern",9.18158,80.84608,1,"Alampil","Divisional Hospital"],["IYANKANKULAM PMCU","MULLAITIVU","Northern",9.2074,80.7643,0,"Mullaitivu RDHS area","Primary Medical Care Unit"],["KIRIBBANWEWA PMCU","MULLAITIVU","Northern",9.2047,80.8347,0,"Mullaitivu RDHS area","Primary Medical Care Unit"],["MALLAVI BH","MULLAITIVU","Northern",9.136,80.307,1,"Mallavi","Base Hospital"],["MANKULAM BH","MULLAITIVU","Northern",9.13699,80.44517,1,"Mankulam","Base Hospital"],["MULLAITIVU DGH","MULLAITIVU","Northern",9.26709,80.81425,1,"Mullathivu","District General Hospital"],["MULLAITIVU RDHS","MULLAITIVU","Northern",9.26709,80.81425,1,"Mullathivu","RDHS Office"],["NADDANKANDAL DH","MULLAITIVU","Northern",9.00401,80.22098,1,"Naddankandal","Divisional Hospital"],["ODDUSUDDAN DH","MULLAITIVU","Northern",9.15387,80.64973,1,"Oddusudan","Divisional Hospital"],["PUTHUKKUDYIRUPPU BH","MULLAITIVU","Northern",9.3158,80.69262,1,"Puthukkudiyiruppu","Base Hospital"],["SAMPATHNUWARA DH","MULLAITIVU","Northern",9.2092,80.7946,0,"Mullaitivu RDHS area","Divisional Hospital"],["UNNAPULAVU (DH MULLAITIVU) DH","MULLAITIVU","Northern",9.26709,80.81425,1,"Mullathivu","Divisional Hospital"],["BOGASWAWA PMCU","VAVUNIYA","Northern",8.8191,80.5933,0,"Vavuniya RDHS area","Primary Medical Care Unit"],["CHEDDIKULAM BH","VAVUNIYA","Northern",8.6656,80.29624,1,"Cheddikulam","Base Hospital"],["CHEDDIKULAM MOH","VAVUNIYA","Northern",8.6656,80.29624,1,"Cheddikulam","MOH Office"],["GANESHPURAM PMCU","VAVUNIYA","Northern",8.7895,80.4123,0,"Vavuniya RDHS area","Primary Medical Care Unit"],["KANKARAYANKULAM PMCU","VAVUNIYA","Northern",8.75365,80.49575,1,"Kanagarayankulam","Primary Medical Care Unit"],["MAMADUWA DH","VAVUNIYA","Northern",8.81635,80.55496,1,"Mamaduwa","Divisional Hospital"],["POOVARASANKULAM DH","VAVUNIYA","Northern",8.78418,80.3603,1,"Poovarasankulam","Divisional Hospital"],["ULUKULAM DH","VAVUNIYA","Northern",8.7266,80.4949,0,"Vavuniya RDHS area","Divisional Hospital"],["VAVUNIYA DGH","VAVUNIYA","Northern",8.7514,80.4971,1,"Vavuniya","District General Hospital"],["VAVUNIYA MUNICIPAL COUNCIL","VAVUNIYA","Northern",8.7514,80.4971,1,"Vavuniya","Specialised / Other"],["VAVUNIYA NORTH MOH","VAVUNIYA","Northern",8.7514,80.4971,1,"Vavuniya","MOH Office"],["VAVUNIYA RDHS","VAVUNIYA","Northern",8.7514,80.4971,1,"Vavuniya","RDHS Office"],["VAVUNIYA SOUTH MOH","VAVUNIYA","Northern",8.7514,80.4971,1,"Vavuniya","MOH Office"],["ALGAMA PMCU","KEGALLE","Sabaragamuwa",7.15632,80.16588,1,"Algama","Primary Medical Care Unit"],["AMANAWALA DH","KEGALLE","Sabaragamuwa",7.1854,80.3502,0,"Kegalle RDHS area","Divisional Hospital"],["BASNAGALA PMCU","KEGALLE","Sabaragamuwa",7.2163,80.233,0,"Kegalle RDHS area","Primary Medical Care Unit"],["BELIGALA DH","KEGALLE","Sabaragamuwa",7.1377,80.2931,0,"Kegalle RDHS area","Divisional Hospital"],["BORALANKADA PMCU","KEGALLE","Sabaragamuwa",6.97735,80.33802,1,"Boralankada","Primary Medical Care Unit"],["BULATHKOHUPITIYA PMCU","KEGALLE","Sabaragamuwa",7.10453,80.33605,1,"Bulathkohupitiya","Primary Medical Care Unit"],["GALAPITAMADA PMCU","KEGALLE","Sabaragamuwa",7.13935,80.23475,1,"Galapitamada","Primary Medical Care Unit"],["HALGOLLA WATTA (EDH) DH","KEGALLE","Sabaragamuwa",7.1932,80.3922,0,"Kegalle RDHS area","Divisional Hospital"],["HEMMATHAGAMA DH","KEGALLE","Sabaragamuwa",7.17336,80.50078,1,"Hemmatagama","Divisional Hospital"],["KARAWANELLA BH","KEGALLE","Sabaragamuwa",7.0236,80.2433,1,"Karawanella","Base Hospital"],["KEGALLE NARANGODA PMCU","KEGALLE","Sabaragamuwa",7.25133,80.34638,1,"Kegalle","Primary Medical Care Unit"],["MINUWANGAMUWA PMCU","KEGALLE","Sabaragamuwa",7.1839,80.2804,0,"Kegalle RDHS area","Primary Medical Care Unit"],["RAMBUKKANA DH","KEGALLE","Sabaragamuwa",7.27923,80.38338,1,"Rambukkana","Divisional Hospital"],["WAKIRIGALA PMCU","KEGALLE","Sabaragamuwa",7.1782,80.275,0,"Kegalle RDHS area","Primary Medical Care Unit"],["WATTEGEDARA PMCU","KEGALLE","Sabaragamuwa",7.2808,80.4421,0,"Kegalle RDHS area","Primary Medical Care Unit"],["AMMADUWA PMCU","RATHNAPURA","Sabaragamuwa",6.7483,80.4009,0,"Rathnapura RDHS area","Primary Medical Care Unit"],["AYAGAMA DH","RATHNAPURA","Sabaragamuwa",6.63773,80.31255,1,"Ayagama","Divisional Hospital"],["BALANGODA BH","RATHNAPURA","Sabaragamuwa",6.64252,80.68873,1,"Balangoda","Base Hospital"],["BUTHKANDA PMCU","RATHNAPURA","Sabaragamuwa",6.6978,80.4614,0,"Rathnapura RDHS area","Primary Medical Care Unit"],["EHELIYAGODA BH","RATHNAPURA","Sabaragamuwa",6.84856,80.26001,1,"Eheliyagoda","Base Hospital"],["EHELIYAGODA MOH","RATHNAPURA","Sabaragamuwa",6.84856,80.26001,1,"Eheliyagoda","MOH Office"],["ELLAWALA PMCU","RATHNAPURA","Sabaragamuwa",6.80893,80.2628,1,"Ellawala","Primary Medical Care Unit"],["EMBILIPITIYA DGH","RATHNAPURA","Sabaragamuwa",6.31623,80.84331,1,"Embilipitiya","District General Hospital"],["ENDANA DH","RATHNAPURA","Sabaragamuwa",6.782,80.3854,0,"Rathnapura RDHS area","Divisional Hospital"],["GILIMALE DH","RATHNAPURA","Sabaragamuwa",6.75194,80.4267,1,"Gillimale","Divisional Hospital"],["GODAKAWELA DH","RATHNAPURA","Sabaragamuwa",6.50491,80.65211,1,"Godakawela","Divisional Hospital"],["GURUBEWILAGAMA PMCU","RATHNAPURA","Sabaragamuwa",6.71,80.4003,0,"Rathnapura RDHS area","Primary Medical Care Unit"],["KAHAWATTA BH","RATHNAPURA","Sabaragamuwa",6.57553,80.57457,1,"Kahawatta","Base Hospital"],["KALAWANA BH","RATHNAPURA","Sabaragamuwa",6.53171,80.39648,1,"Kalawana","Base Hospital"],["KALTOTA DH","RATHNAPURA","Sabaragamuwa",6.6594,80.87099,1,"Kaltota","Divisional Hospital"],["KIRIBATHGALA DH","RATHNAPURA","Sabaragamuwa",6.6859,80.4453,0,"Rathnapura RDHS area","Divisional Hospital"],["KIRIELLA DH","RATHNAPURA","Sabaragamuwa",6.7295,80.27046,1,"Kiriella","Divisional Hospital"],["KOLONNA BH","RATHNAPURA","Sabaragamuwa",6.40528,80.68523,1,"Kolonna","Base Hospital"],["MAHINGODA PMCU","RATHNAPURA","Sabaragamuwa",6.6716,80.407,0,"Rathnapura RDHS area","Primary Medical Care Unit"],["NIVITIGALA DH","RATHNAPURA","Sabaragamuwa",6.59588,80.45777,1,"Nivitigala","Divisional Hospital"],["POTHUPITIYA DH","RATHNAPURA","Sabaragamuwa",6.6777,80.505,0,"Rathnapura RDHS area","Divisional Hospital"],["RAKWANA DH","RATHNAPURA","Sabaragamuwa",6.46472,80.61604,1,"Rakwana","Divisional Hospital"],["RATHGANGA PMCU","RATHNAPURA","Sabaragamuwa",6.7308,80.4894,0,"Rathnapura RDHS area","Primary Medical Care Unit"],["RATHNAPURA STD CLINIC","RATHNAPURA","Sabaragamuwa",6.68278,80.39917,1,"Ratnapura","Specialised / Other"],["RATHNAPURA TEACHING HOSPITAL","RATHNAPURA","Sabaragamuwa",6.68278,80.39917,1,"Ratnapura","Teaching Hospital"],["SOORIYAKANDA DH","RATHNAPURA","Sabaragamuwa",6.7891,80.3413,0,"Rathnapura RDHS area","Divisional Hospital"],["SRI PALABADDALA PMCU","RATHNAPURA","Sabaragamuwa",6.78906,80.46046,1,"Sri Palabaddala","Primary Medical Care Unit"],["WATAPOTHA PMCU","RATHNAPURA","Sabaragamuwa",6.72834,80.39381,1,"Watapotha","Primary Medical Care Unit"],["AMBALANGODA PMCU","GALLE","Southern",6.2355,80.0538,1,"Ambalangoda","Primary Medical Care Unit"],["BADDEGAMA DH","GALLE","Southern",6.16883,80.1794,1,"Baddegama","Divisional Hospital"],["BALAPITIYA BH","GALLE","Southern",6.27835,80.0403,1,"Balapitiya","Base Hospital"],["ELPITIYA BH","GALLE","Southern",6.288,80.1596,1,"Elpitiya","Base Hospital"],["GALLE NATIONAL HOSPITAL","GALLE","Southern",6.04819,80.2154,1,"Galle","National Hospital"],["HIKKADUWA MOH","GALLE","Southern",6.13947,80.10629,1,"Hikkaduwa","MOH Office"],["KARANDENIYA MOH","GALLE","Southern",6.26832,80.08981,1,"Karandeniya","MOH Office"],["MAHAINDURUWA PMCU","GALLE","Southern",6.1165,80.2385,0,"Galle RDHS area","Primary Medical Care Unit"],["NELUWA DH","GALLE","Southern",6.3731,80.35751,1,"Neluwa","Divisional Hospital"],["UDUGAMA BH","GALLE","Southern",6.2179,80.33802,1,"Udugama","Base Hospital"],["URAGAHASMANDIYA DH","GALLE","Southern",6.1431,80.1763,0,"Galle RDHS area","Divisional Hospital"],["ABEYSEKARAGAMA PMCU","HAMBANTOTA","Southern",6.2013,81.0673,0,"Hambantota RDHS area","Primary Medical Care Unit"],["AMBALANTHOTA MOH","HAMBANTOTA","Southern",6.1226,81.02376,1,"Ambalantota","MOH Office"],["ANGUNUKOLAPELESSA DH","HAMBANTOTA","Southern",6.16557,80.90312,1,"Angunakolapelessa","Divisional Hospital"],["BANDAGIRIYA PMCU","HAMBANTOTA","Southern",6.2006,81.2064,0,"Hambantota RDHS area","Primary Medical Care Unit"],["BELIATTE DH","HAMBANTOTA","Southern",6.0486,80.7345,1,"Beliatte","Divisional Hospital"],["ELALLE PMCU","HAMBANTOTA","Southern",6.2339,81.0352,0,"Hambantota RDHS area","Primary Medical Care Unit"],["GETAMANNA PMCU","HAMBANTOTA","Southern",6.03955,80.68956,1,"Getamanna","Primary Medical Care Unit"],["HAMBANTOTA CHEST CLINIC","HAMBANTOTA","Southern",6.14288,81.12123,1,"Hambantota","Specialised / Other"],["HAMBANTOTA DGH","HAMBANTOTA","Southern",6.14288,81.12123,1,"Hambantota","District General Hospital"],["HAMBANTOTA RDHS","HAMBANTOTA","Southern",6.14288,81.12123,1,"Hambantota","RDHS Office"],["KIRAMA DH","HAMBANTOTA","Southern",6.20669,80.66182,1,"Kirama","Divisional Hospital"],["OKEWELA MOH","HAMBANTOTA","Southern",6.1454,81.0621,0,"Hambantota RDHS area","MOH Office"],["PALATHUDUWA PMCU","HAMBANTOTA","Southern",6.2327,81.1647,0,"Hambantota RDHS area","Primary Medical Care Unit"],["RIDIYAGAMA PMCU","HAMBANTOTA","Southern",6.1663,81.012,0,"Hambantota RDHS area","Primary Medical Care Unit"],["TANGALLE BH","HAMBANTOTA","Southern",6.0243,80.7941,1,"Tangalle","Base Hospital"],["THISSAMAHARAMAYA BH","HAMBANTOTA","Southern",6.27915,81.28767,1,"Tissamaharama","Base Hospital"],["UDUWILA PMCU","HAMBANTOTA","Southern",6.2199,81.1862,0,"Hambantota RDHS area","Primary Medical Care Unit"],["WALASMULLA BH","HAMBANTOTA","Southern",6.15089,80.69372,1,"Walasmulla","Base Hospital"],["DEIYANDARA DH","MATARA","Southern",6.15257,80.60286,1,"Deiyandara","Divisional Hospital"],["DENIYAYA BH","MATARA","Southern",6.34248,80.55966,1,"Deniyaya","Base Hospital"],["KAMBURUPITIYA BH","MATARA","Southern",6.07791,80.56329,1,"Kamburupitiya","Base Hospital"],["KIRINDA PUHULWELLA DH","MATARA","Southern",6.05153,80.62575,1,"Puhulwella","Divisional Hospital"],["MATARA DGH","MATARA","Southern",5.94851,80.53528,1,"Matara","District General Hospital"],["MATARA RDHS","MATARA","Southern",5.94851,80.53528,1,"Matara","RDHS Office"],["MIDIGAMA DH","MATARA","Southern",5.962,80.388,1,"Midigama","Divisional Hospital"],["MORAWAKA MOH","MATARA","Southern",6.26528,80.49105,1,"Morawaka","MOH Office"],["ROTAMBA PMCU","MATARA","Southern",6.0643,80.5727,0,"Matara RDHS area","Primary Medical Care Unit"],["URUBOKKA DH","MATARA","Southern",6.30653,80.63061,1,"Urubokka","Divisional Hospital"],["WELIGAMA MOH","MATARA","Southern",5.97501,80.42968,1,"Weligama","MOH Office"],["BADULLA TEACHING HOSPITAL","BADULLA","Uva",6.9895,81.0557,1,"Badulla","Teaching Hospital"],["BALLAKETUWA PMCU","BADULLA","Uva",6.86226,81.1003,1,"Ballaketuwa","Primary Medical Care Unit"],["BANDARAWELA BH","BADULLA","Uva",6.82588,80.99816,1,"Bandarawela","Base Hospital"],["BOGAHAKUMBURA DH","BADULLA","Uva",6.8633,80.87375,1,"Bogahakumbura","Divisional Hospital"],["BORALANDA DH","BADULLA","Uva",6.8279,80.8945,1,"Boralanda","Divisional Hospital"],["DIYATHALAWA BH","BADULLA","Uva",6.80695,80.9572,1,"Diyatalawa","Base Hospital"],["EKERIYANKUMBURA DH","BADULLA","Uva",7.29889,81.24087,1,"Ekiriyankumbura","Divisional Hospital"],["GALAUDA DH","BADULLA","Uva",6.9934,81.05498,1,"Galauda","Divisional Hospital"],["GIRANDURUKOTTE DH","BADULLA","Uva",7.46292,81.01749,1,"Girandurukotte","Divisional Hospital"],["KAHATARUPPA DH","BADULLA","Uva",6.9819,81.07628,1,"Kahataruppa","Divisional Hospital"],["KANDAGOLLA DH","BADULLA","Uva",6.99276,81.10846,1,"Kendagolla","Divisional Hospital"],["KANDAKETIYA DH","BADULLA","Uva",7.0075,81.0302,0,"Badulla RDHS area","Divisional Hospital"],["KERKIL DH","BADULLA","Uva",7.075,81.0045,0,"Badulla RDHS area","Divisional Hospital"],["LIYANGAHAWELA PMCU","BADULLA","Uva",6.81189,81.02992,1,"Liyangahawela","Primary Medical Care Unit"],["LUNUGALA DH","BADULLA","Uva",7.04037,81.20167,1,"Lunugala","Divisional Hospital"],["LUNUWATTA PANNALAWEL PMCU","BADULLA","Uva",6.95572,80.91939,1,"Lunuwatta","Primary Medical Care Unit"],["MAHADOWA DH","BADULLA","Uva",6.9036,80.9633,0,"Badulla RDHS area","Divisional Hospital"],["MAHIYANGANAYA BH","BADULLA","Uva",7.33161,81.00368,1,"Mahiyanganaya","Base Hospital"],["METIGAHATENNA DH","BADULLA","Uva",7.0772,81.15408,1,"Metigahatenna","Divisional Hospital"],["MIRAHAWATTA DH","BADULLA","Uva",6.87515,80.93398,1,"Mirahawatta","Divisional Hospital"],["NAMUNUKULA PMCU","BADULLA","Uva",6.87448,81.11547,1,"Namunukula","Primary Medical Care Unit"],["PASSARA DH","BADULLA","Uva",6.93491,81.1527,1,"Passara","Divisional Hospital"],["RIDEEMALIYADDA MOH","BADULLA","Uva",7.21816,81.12051,1,"Ridimaliyadda","MOH Office"],["ROEBERRY DH","BADULLA","Uva",6.943,81.1309,0,"Badulla RDHS area","Divisional Hospital"],["URANIYA DH","BADULLA","Uva",7.26054,81.08523,1,"Uraniya","Divisional Hospital"],["UVATISSAPURA NAGADEEPA MAPAKADAWEWA PMCU","BADULLA","Uva",6.9819,81.07628,1,"Uva Tissapura","Primary Medical Care Unit"],["WELIMADA BH","BADULLA","Uva",6.90191,80.90792,1,"Welimada","Base Hospital"],["WEWEGAMA DH","BADULLA","Uva",6.9124,81.0746,0,"Badulla RDHS area","Divisional Hospital"],["BIBILE BH","MONERAGALA","Uva",6.86086,81.35025,1,"Bibile","Base Hospital"],["BUTHTHALA DH","MONERAGALA","Uva",6.75892,81.24913,1,"Buttala","Divisional Hospital"],["DELIWA PMCU","MONERAGALA","Uva",6.8361,81.3627,0,"Moneragala RDHS area","Primary Medical Care Unit"],["DEWATHURA PMCU","MONERAGALA","Uva",6.7834,81.2344,0,"Moneragala RDHS area","Primary Medical Care Unit"],["DOMBAGAHAWELA PMCU","MONERAGALA","Uva",6.90765,81.50942,1,"Dombagahawela","Primary Medical Care Unit"],["ETHIMALE DH","MONERAGALA","Uva",6.985,81.3869,0,"Moneragala RDHS area","Divisional Hospital"],["HINGURUKADUWA DH","MONERAGALA","Uva",6.82575,81.16298,1,"Hingurukaduwa","Divisional Hospital"],["INGINIYAGALA DH","MONERAGALA","Uva",7.21382,81.54319,1,"Inginiyagala","Divisional Hospital"],["KATHARAGAMA DH","MONERAGALA","Uva",6.41355,81.33257,1,"Kataragama","Divisional Hospital"],["KOTAGAMA PMCU","MONERAGALA","Uva",7.11099,81.18026,1,"Kotagama","Primary Medical Care Unit"],["KOTIYAGALA PMCU","MONERAGALA","Uva",6.8784,81.4551,0,"Moneragala RDHS area","Primary Medical Care Unit"],["MEDAGAMA MOH","MONERAGALA","Uva",6.8561,81.4402,0,"Moneragala RDHS area","MOH Office"],["MONERAGALA DGH","MONERAGALA","Uva",6.8714,81.3487,1,"Monaragala","District General Hospital"],["MONERAGALA RDHS","MONERAGALA","Uva",6.8714,81.3487,1,"Monaragala","RDHS Office"],["RATMALGAHAELLA PMCU","MONERAGALA","Uva",6.9503,81.2817,0,"Moneragala RDHS area","Primary Medical Care Unit"],["SIYAMBALANDUWA BH","MONERAGALA","Uva",6.90646,81.56101,1,"Siyambalanduwa","Base Hospital"],["SIYAMBALANDUWA MOH","MONERAGALA","Uva",6.90646,81.56101,1,"Siyambalanduwa","MOH Office"],["THANAMALWILA DH","MONERAGALA","Uva",6.43975,81.1334,1,"Thanamalwila","Divisional Hospital"],["WELLAWAYA BH","MONERAGALA","Uva",6.73774,81.10306,1,"Wellawaya","Base Hospital"],["AVISSAWELLA DGH","COLOMBO","Western",6.95433,80.20458,1,"Avissawella","District General Hospital"],["DIRECTOR PLANNING OFFICE ( MINISTRY OF HEALTH )","COLOMBO","Western",6.8164,79.9014,0,"Colombo RDHS area","Specialised / Other"],["ALAWALA PMCU","GAMPAHA","Western",7.1309,80.0216,0,"Gampaha RDHS area","Primary Medical Care Unit"],["ATTANAGALLA MOH","GAMPAHA","Western",7.11374,80.1355,1,"Attanagalla","MOH Office"],["KANDAWALA KATANA PMCU","GAMPAHA","Western",7.24803,79.89937,1,"Katana","Primary Medical Care Unit"],["KIRIBATHGODA BH","GAMPAHA","Western",6.9781,79.9297,1,"Kiribathgoda","Base Hospital"],["MALWATHUHIRIPITIYA DH","GAMPAHA","Western",7.1032,79.9885,0,"Gampaha RDHS area","Divisional Hospital"],["MINUWANGODA BH","GAMPAHA","Western",7.1663,79.9533,1,"Minuwangoda","Base Hospital"],["PUGODA PMCU","GAMPAHA","Western",6.95903,80.13172,1,"Pugoda","Primary Medical Care Unit"],["SPECIALIZED KIDNEY STONE REFERRAL CENTRE (SKSRC)","GAMPAHA","Western",7.1656,80.1057,0,"Gampaha RDHS area","Specialised / Other"],["ALUTHGAMWEEDIYA DARGA TOWN DH","KALUTARA","Western",6.44475,80.01686,1,"Dharga Town","Divisional Hospital"],["BANDARAGAMA MOH","KALUTARA","Western",6.71441,79.98906,1,"Bandaragama","MOH Office"],["BULATHSINGHALA MOH","KALUTARA","Western",6.64875,80.17914,1,"Bulathsinhala","MOH Office"],["GALPATHA DH","KALUTARA","Western",6.62915,80.02345,1,"Galpatha","Divisional Hospital"],["GEEKIYANAKANDA ESTATE HOSPITAL PMCU","KALUTARA","Western",6.4701,80.0498,0,"Kalutara RDHS area","Primary Medical Care Unit"],["GONADUWA DH","KALUTARA","Western",6.6677,80.0783,0,"Kalutara RDHS area","Divisional Hospital"],["HORANA DGH","KALUTARA","Western",6.72465,80.03995,1,"Horana","District General Hospital"],["ITTAPANA DH","KALUTARA","Western",6.43665,80.09552,1,"Ittapana","Divisional Hospital"],["KALUTARA TEACHING HOSPITAL","KALUTARA","Western",6.5831,79.9593,1,"Kalutara","Teaching Hospital"],["KATUGAHAHENA DH","KALUTARA","Western",6.4695,80.0682,0,"Kalutara RDHS area","Divisional Hospital"],["MOLKAWA PMCU","KALUTARA","Western",6.60507,80.23771,1,"Molkawa","Primary Medical Care Unit"],["NABODA DH","KALUTARA","Western",6.5907,80.0748,0,"Kalutara RDHS area","Divisional Hospital"],["PALINDANUWARA MOH","KALUTARA","Western",6.6712,80.0071,0,"Kalutara RDHS area","MOH Office"],["PANADURA BH","KALUTARA","Western",6.7132,79.9026,1,"Panadura","Base Hospital"],["PANADURA KETHUMATHIE MATERNITY HOSPITAL","KALUTARA","Western",6.7132,79.9026,1,"Panadura","Specialised / Other"],["PIMBURA BH","KALUTARA","Western",6.55868,80.15681,1,"Pimbura","Base Hospital"],["THINIYAWALA PMCU","KALUTARA","Western",6.5041,80.0253,0,"Kalutara RDHS area","Primary Medical Care Unit"]],"vac":[[0,"ADDITIONAL MOH","New"],[1,"MO","New"],[2,"MO","Difficult station"],[3,"MO","Difficult station"],[4,"MO","New"],[5,"MO ANAESTHESIA","New"],[5,"MO ICU","New"],[5,"MO OPD","New"],[5,"SHO GYN & OBS","New"],[5,"SHO SURGERY","New"],[6,"ADDITIONAL MOH","New"],[7,"MO","New"],[8,"MO","New"],[9,"MO CARDIOLOGY","New"],[9,"MO CARDIOTHORACIC SURGERY","New"],[9,"MO CARDIOTHORACIC SURGERY","New"],[9,"MO CHEMICAL PATHOLOGY","New"],[9,"MO ELECTRO CARDIO PHYSIOLOGY","New"],[9,"MO FORENSIC PSYCHIATRY","New"],[9,"MO GASTROENTEROLOGY","New"],[9,"MO GERIATRIC MEDICINE","New"],[9,"MO GI SURGERY","New"],[9,"MO GU SURGERY","New"],[9,"MO GU SURGERY","New"],[9,"MO INTERMEDIATE ICU","New"],[9,"MO NEPHROLOGY & ICU","New"],[9,"MO NEURO SURGERY","New"],[9,"MO NEURO SURGERY","New"],[9,"MO ONCO SURGERY","New"],[9,"MO ONCOLOGY","New"],[9,"MO ORTHOPAEDIC SURGERY","New"],[9,"MO PAEDIATRICS SURGERY","New"],[9,"MO VASCULAR & TRANSPLANT","New"],[9,"MO VIROLOGY","New"],[10,"MO RELIEF","New"],[11,"MO","New"],[12,"MO","New"],[13,"MO","Difficult station"],[14,"MO","New"],[15,"MO","New"],[16,"MO BLOOD BANK","New"],[16,"MO CHEST MEDICINE","New"],[16,"MO ENDOCRINOLOGY","New"],[16,"MO ENT","New"],[16,"MO ETU","New"],[16,"MO MEDICINE","New"],[16,"MO MEDICO LEGAL","New"],[16,"MO MEDICO LEGAL","New"],[16,"MO MICROBIOLOGY","New"],[16,"MO ORTHOPAEDIC SURGERY","New"],[16,"MO PBU","New"],[16,"MO PBU","New"],[16,"MO RADIOLOGY","New"],[16,"MO VP OPD","New"],[16,"SHO MEDICINE","New"],[17,"MO ANAESTHESIA/SICU","New"],[17,"MO ANAESTHESIA/SICU","New"],[18,"MO DIALYSIS","New"],[19,"MO","New"],[20,"MO CLINIC","New"],[20,"MO GYN & OBS","New"],[20,"MO MEDICINE","New"],[20,"MO MEDICO LEGAL","New"],[20,"MO SURGERY","New"],[21,"MO","New"],[21,"MO","New"],[22,"MO","Difficult station"],[23,"MO","New"],[24,"MO","New"],[25,"MO ANAESTHESIA/ICU","New"],[25,"MO ANAESTHESIA/ICU","New"],[25,"MO BLOOD BANK","AT Replacement"],[25,"MO CARDIOLOGY","New"],[25,"MO ETU","AT Replacement"],[25,"MO EYE","AT Replacement"],[25,"MO HAEMATOLOGY","AT Replacement"],[25,"MO MEDICO LEGAL","New"],[25,"MO MEDICO LEGAL","New"],[25,"SHO GYN & OBS","AT Replacement"],[26,"MO","New"],[27,"MO","New"],[28,"MO","New"],[29,"MO","New"],[30,"MO","New"],[31,"MO A&E","New"],[31,"MO A&E","New"],[31,"MO MEDICO LEGAL","New"],[31,"MO MENTAL HEALTH","New"],[31,"MO MENTAL HEALTH","New"],[31,"MO NEPHROLOGY","New"],[31,"MO NEPHROLOGY","New"],[31,"SHO GYN & OBS","New"],[31,"SHO MEDICINE","New"],[31,"SHO SURGERY","New"],[31,"SHO SURGERY","New"],[32,"MO","New"],[32,"MO","New"],[32,"MO","New"],[33,"MO MENTAL HEALTH","New"],[33,"MO RELIEF","New"],[33,"MO RELIEF","New"],[34,"MO","New"],[35,"MO","New"],[36,"MO","New"],[37,"MO","New"],[38,"MO","New"],[38,"MO","New"],[39,"MO","Difficult station"],[40,"MO EYE","New"],[40,"MO ICU","New"],[40,"MO OPD/ETU","New"],[40,"MO OPD/ETU","New"],[40,"MO PAEDIATRICS","New"],[40,"MO PBU","New"],[40,"SHO MEDICINE","New"],[40,"SHO SURGERY","New"],[41,"MO","New"],[42,"MOIC","New"],[43,"MO","New"],[44,"MOIC","New"],[45,"MO","Difficult station"],[46,"MO","New"],[46,"MO","New"],[47,"ADDITIONAL MOH","New"],[48,"MO","Difficult station"],[49,"MO","New"],[50,"MO","Difficult station"],[51,"MO","New"],[52,"MOIC","New"],[53,"MO","Difficult station"],[53,"MO","New"],[54,"MO","New"],[55,"MO","Difficult station"],[56,"MOIC","New"],[57,"MOIC","New"],[58,"MO","New"],[59,"MO A&E","New"],[59,"MO ANAESTHESIA","New"],[59,"MO ANAESTHESIA","New"],[59,"MO ANAESTHESIA","New"],[59,"MO ANAESTHESIA/ICU","New"],[59,"MO BLOOD BANK","New"],[59,"MO DIALYSIS","New"],[59,"MO DIALYSIS","New"],[59,"MO ENDOCRINOLOGY","New"],[59,"MO GU SURGERY","New"],[59,"MO GU SURGERY","New"],[59,"MO MICU","New"],[59,"MO MICU","New"],[59,"MO MICU","New"],[59,"MO MICU","New"],[59,"MO MICU","Special Requests"],[59,"MO ORTHOPAEDIC SURGERY","New"],[59,"MO PBU","New"],[59,"MO QUALITY","New"],[59,"MO RADIOLOGY","New"],[59,"SHO GYN & OBS","New"],[59,"SHO MEDICINE","New"],[59,"SHO MEDICINE","Special Requests"],[60,"ADDITIONAL MOH","New"],[61,"MO RELIEF","New"],[61,"MO RELIEF","New"],[62,"MO STD CLINIC","New"],[63,"MOIC","New"],[64,"ADDITIONAL MOH","New"],[65,"MO","New"],[66,"MO ANAESTHESIA","New"],[66,"MO ETU","New"],[66,"MO GYN & OBS","New"],[66,"MO GYN & OBS","New"],[66,"MO GYN & OBS","New"],[66,"MO MEDICINE","New"],[66,"MO OPD/ETU","New"],[66,"MO OPD/ETU","New"],[66,"MO PAEDIATRICS","New"],[66,"MO PAEDIATRICS","New"],[66,"MO SURGERY","New"],[67,"MO","Difficult station"],[68,"MO","New"],[68,"MO","New"],[69,"MO CHEST CLINIC","New"],[70,"MO A&E","New"],[70,"MO ANAESTHESIA","New"],[70,"MO ANAESTHESIA","New"],[70,"MO ANAESTHESIA","New"],[70,"MO ANAESTHESIA","New"],[70,"MO ENDOCRINOLOGY","New"],[70,"MO ENT","New"],[70,"MO EYE","New"],[70,"MO GENITO URINARY","New"],[70,"MO HISTOPATHOLOGY","New"],[70,"MO JMO","New"],[70,"MO NEPHROLOGY","New"],[70,"MO NEUROLOGY","New"],[70,"MO SICU","New"],[70,"MO VP OPD","New"],[70,"SHO GYN & OBS","New"],[70,"SHO MEDICINE","New"],[71,"MO","Difficult station"],[72,"MO ANAESTHESIA","Difficult station"],[72,"MO ANAESTHESIA","Difficult station"],[72,"MO BLOOD BANK","Difficult station"],[72,"MO GYN & OBS","Difficult station"],[72,"MO LAB","New"],[72,"MO MEDICINE","Difficult station"],[72,"MO OPD/ETU","Difficult station"],[72,"MO OPD/ETU","Difficult station"],[72,"MO PAEDIATRICS","Difficult station"],[72,"MO PAEDIATRICS","Difficult station"],[73,"MO","Difficult station"],[74,"MO","Difficult station"],[75,"MO","Difficult station"],[76,"ADDITIONAL MOH","New"],[77,"MO ANAESTHESIA","Difficult station"],[77,"MO GYN & OBS","Difficult station"],[77,"MO MEDICINE","New"],[77,"MO OPD/ETU","Difficult station"],[77,"MO OPD/ETU","Difficult station"],[77,"MO PCU","Difficult station"],[77,"MO SURGERY","Difficult station"],[78,"MO","Difficult station"],[79,"MO","New"],[79,"MO","New"],[79,"MO","New"],[80,"ADDITIONAL MOH","New"],[81,"MO","Special Requests"],[82,"MO","Difficult station"],[83,"MO","Difficult station"],[84,"MO","New"],[84,"MO","New"],[85,"MO","Difficult station"],[86,"MO","New"],[87,"MO","Difficult station"],[88,"MO A&E","New"],[88,"MO A&E","New"],[88,"MO ANAESTHESIA/ICU","New"],[88,"MO ANAESTHESIA/ICU","New"],[88,"MO ANAESTHESIA/ICU","New"],[88,"MO BLOOD BANK","New"],[88,"MO BLOOD BANK","New"],[88,"MO CARDIOLOGY","New"],[88,"MO CARDIOLOGY","New"],[88,"MO CARDIOLOGY CCU","New"],[88,"MO DERMATOLOGY","New"],[88,"MO ENT","New"],[88,"MO EYE","New"],[88,"MO GI SURGERY","New"],[88,"MO GYN & OBS","New"],[88,"MO JMO","New"],[88,"MO MENTAL HEALTH","New"],[88,"MO MICROBIOLOGY","New"],[88,"MO NEPHROLOGY","New"],[88,"MO NEPHROLOGY","New"],[88,"MO NEPHROLOGY","New"],[88,"MO NEURO SURGERY","New"],[88,"MO NICU","New"],[88,"MO ONCO SURGERY","New"],[88,"MO ONCO SURGERY","New"],[88,"MO ONCOLOGY","New"],[88,"MO ORTHOPAEDIC SURGERY","New"],[88,"MO PAEDIATRIC NEPHROLOGY","New"],[88,"MO PAEDIATRICS NEUROLOGY","New"],[88,"MO PICU","New"],[88,"MO RESPIRATORY MEDICINE","New"],[88,"MO SPORTS MEDICINE","New"],[88,"SHO PAEDIATRICS","New"],[88,"SHO PAEDIATRICS","New"],[88,"SHO SURGERY","New"],[89,"MO","Difficult station"],[90,"MO","New"],[91,"MO ETU","New"],[91,"MO MEDICINE","New"],[91,"MO OPD","New"],[92,"MO","Special Requests"],[92,"MO GYN & OBS","New"],[92,"MO OPD/ETU","New"],[92,"MO PAEDIATRICS","New"],[92,"MO PAEDIATRICS","New"],[92,"MO SURGERY","New"],[93,"MO","Difficult station"],[94,"MO","New"],[95,"MO","New"],[96,"MO DIALYSIS","New"],[96,"MO GYN & OBS","New"],[96,"MO PAEDIATRICS","New"],[97,"MO","New"],[98,"MO","New"],[99,"MO","Difficult station"],[100,"MO","Difficult station"],[101,"MO","Difficult station"],[102,"MO","Difficult station"],[103,"MO","Difficult station"],[104,"MO","New"],[105,"MO","New"],[106,"MO","New"],[107,"MO","New"],[108,"MO","Difficult station"],[108,"MO","New"],[109,"ADDITIONAL MOH","Difficult station"],[110,"MO ETU","New"],[110,"MO ETU","New"],[110,"MO ETU","New"],[110,"MO GYN & OBS","New"],[110,"MO MEDICINE","New"],[110,"MO OPD","New"],[110,"MO OPD","New"],[111,"MO ANAESTHESIA/ICU","New"],[111,"MO ANAESTHESIA/ICU","New"],[111,"MO ANAESTHESIA/ICU","New"],[111,"MO ANAESTHESIA/ICU","New"],[111,"MO ANAESTHESIA/ICU","New"],[111,"MO DERMATOLOGY","New"],[111,"MO ETU/PCU","New"],[111,"MO ETU/PCU","New"],[111,"MO JMO","New"],[111,"MO PAEDIATRICS","New"],[111,"SHO MEDICINE","New"],[111,"SHO SURGERY","New"],[112,"MO","New"],[113,"ADDITIONAL MOH","New"],[114,"MO","Difficult station"],[115,"MO A&E","New"],[115,"MO A&E","New"],[115,"MO A&E","New"],[115,"MO ANAESTHESIA","New"],[115,"MO DIALYSIS","New"],[115,"MO ICU","New"],[115,"MO STROKE UNIT","New"],[115,"SHO GYN & OBS","New"],[115,"SHO MEDICINE","New"],[115,"SHO MEDICINE","New"],[115,"SHO PAEDIATRICS","New"],[115,"SHO SURGERY","New"],[116,"MO RELIEF","Difficult station"],[116,"MO RELIEF","Difficult station"],[117,"MO DIALYSIS","New"],[117,"MO HISTOPATHOLOGY","New"],[117,"MO ICU","New"],[117,"MO JMO","New"],[117,"MO NICU","New"],[117,"MO OPD/PCU","New"],[117,"MO OPD/PCU","New"],[117,"MO OPD/PCU","New"],[117,"MO ORTHOPAEDIC SURGERY","New"],[117,"MO PCU","New"],[117,"MO PCU","New"],[117,"SHO PAEDIATRICS","New"],[118,"MO","New"],[119,"MO","Difficult station"],[120,"MO","New"],[121,"MO BLOOD BANK","New"],[122,"MO","Difficult station"],[123,"MO","Difficult station"],[123,"MO ANAESTHESIA","Difficult station"],[123,"MO BLOOD BANK","Difficult station"],[123,"MO BLOOD BANK","New"],[123,"MO ETU","New"],[123,"MO GYN & OBS","Difficult station"],[123,"MO GYN & OBS","New"],[123,"MO MEDICINE","Difficult station"],[123,"MO PAEDIATRICS","New"],[124,"MO","New"],[125,"ADDITIONAL MOH","New"],[126,"MO","Difficult station"],[127,"MO","Difficult station"],[128,"MO","Difficult station"],[128,"MO","Difficult station"],[128,"MO","Difficult station"],[128,"MO","New"],[129,"MO","Difficult station"],[130,"MO","Difficult station"],[131,"ADDITIONAL MOH","Difficult station"],[132,"MO","New"],[133,"MO ANAESTHESIA/ICU","New"],[133,"MO ANAESTHESIA/ICU","New"],[133,"MO ANAESTHESIA/ICU","New"],[133,"MO ANAESTHESIA/ICU","New"],[133,"MO ANAESTHESIA/ICU","New"],[133,"MO GYN & OBS","New"],[133,"MO GYN & OBS","New"],[133,"MO GYN & OBS","New"],[133,"MO GYN & OBS","New"],[133,"MO MEDICINE","New"],[133,"MO OPD/ETU","New"],[133,"MO OPD/ETU","New"],[133,"MO OPD/ETU","New"],[133,"MO OPD/ETU","New"],[133,"MO RADIOLOGY","New"],[133,"MO SURGERY","New"],[133,"MO SURGERY","New"],[133,"MO SURGERY","New"],[134,"MO MEDICO LEGAL","New"],[134,"MO OPD/ETU","New"],[135,"MO","Difficult station"],[136,"MO","Difficult station"],[137,"MO OPD","New"],[137,"MO SURGERY","New"],[138,"MO","New"],[138,"MO","New"],[139,"MO","New"],[140,"MO","Difficult station"],[141,"MO","Difficult station"],[142,"MO","Difficult station"],[143,"ADDITIONAL MOH","Difficult station"],[144,"MO ANAESTHESIA","New"],[144,"MO ANAESTHESIA","New"],[144,"MO ANAESTHESIA","New"],[144,"MO ANAESTHESIA","New"],[144,"MO ANAESTHESIA","New"],[144,"MO BLOOD BANK","New"],[144,"MO BLOOD BANK","New"],[144,"MO BLOOD BANK","New"],[144,"MO BLOOD BANK","New"],[144,"MO CARDIOLOGY","New"],[144,"MO DIALYSIS","New"],[144,"MO DIALYSIS","New"],[144,"MO ENT","New"],[144,"MO ENT","New"],[144,"MO ETU","New"],[144,"MO ETU","New"],[144,"MO EYE","New"],[144,"MO EYE","New"],[144,"MO HAEMATOLOGY","New"],[144,"MO ICU","New"],[144,"MO ICU","New"],[144,"MO ICU","New"],[144,"MO JMO","New"],[144,"MO OPD","Special Requests"],[144,"MO PBU","New"],[144,"MO PBU","New"],[144,"MO PBU","New"],[144,"MO PBU","New"],[144,"MO UROLOGY","New"],[144,"SHO GYN & OBS","New"],[144,"SHO GYN & OBS","New"],[144,"SHO GYN & OBS","New"],[144,"SHO PAEDIATRICS","New"],[144,"SHO PAEDIATRICS","New"],[144,"SHO PAEDIATRICS","New"],[144,"SHO PAEDIATRICS","New"],[145,"MO RELIEF","New"],[145,"MO RELIEF","New"],[146,"MO","Difficult station"],[147,"MO","New"],[148,"MO RELIEF","New"],[148,"MO RELIEF","New"],[149,"MO ANAESTHESIA","New"],[149,"MO ANAESTHESIA","New"],[149,"MO ANAESTHESIA","New"],[149,"MO ANAESTHESIA","New"],[149,"MO ANAESTHESIA","New"],[149,"MO BLOOD BANK","New"],[149,"MO CARDIO ELECTROPHYSIOLOGY","New"],[149,"MO ENT","New"],[149,"MO ETU","New"],[149,"MO ETU","New"],[149,"MO ETU","New"],[149,"MO ETU","New"],[149,"MO ETU","New"],[149,"MO EYE","New"],[149,"MO GI SURGERY","New"],[149,"MO GI SURGERY","New"],[149,"MO MEDICO LEGAL","New"],[149,"MO MICU","New"],[149,"MO NEPHROLOGY & DIALYSIS","New"],[149,"MO NEPHROLOGY & DIALYSIS","New"],[149,"MO NEURO SURGERY","New"],[149,"MO NEURO SURGERY","New"],[149,"MO NEURO SURGERY ICU","New"],[149,"MO ONCO SURGERY","New"],[149,"MO ONCO SURGERY","New"],[149,"MO PAEDIATRICS NEUROLOGY","New"],[149,"MO PAEDIATRICS SURGERY","New"],[149,"MO PBU/NICU","New"],[149,"MO PBU/NICU","New"],[149,"MO PBU/NICU","New"],[149,"MO PICU","New"],[149,"MO PICU","New"],[149,"MO PICU","New"],[149,"MO RADIOLOGY","New"],[149,"MO RADIOLOGY","New"],[149,"MO RADIOLOGY","New"],[149,"MO VASCULAR SURGERY","New"],[149,"MO VASCULAR SURGERY","New"],[149,"SHO GYN & OBS","New"],[149,"SHO GYN & OBS","New"],[149,"SHO GYN & OBS","New"],[149,"SHO MEDICINE","New"],[149,"SHO PAEDIATRICS","New"],[149,"SHO PAEDIATRICS","New"],[149,"SHO SURGERY","New"],[149,"MO","Special Requests"],[149,"MO MEDICO LEGAL","Special Requests"],[149,"MO PBU","Special Requests"],[150,"MO","New"],[151,"MO","New"],[152,"MO","New"],[153,"MO","New"],[154,"MO","New"],[155,"MO MEDICO LEGAL","New"],[155,"MO OPD","New"],[156,"MO","Difficult station"],[156,"MO","New"],[157,"MO","New"],[158,"MO","Special Requests"],[158,"MO MEDICINE","New"],[158,"MO NEPHROLOGY","New"],[158,"MO NEPHROLOGY","New"],[159,"MO MEDICINE","New"],[159,"MO PAEDIATRICS","New"],[160,"MO","Difficult station"],[160,"MO","Difficult station"],[161,"MO","New"],[162,"MO MEDICO LEGAL","New"],[162,"MO PAEDIATRICS","New"],[163,"ADDITIONAL MOH","New"],[164,"MO","New"],[165,"MO","New"],[166,"MO","New"],[167,"MO ANAESTHESIA","New"],[167,"MO GYN & OBS","New"],[167,"MO OPD/ETU","New"],[167,"MO OPD/ETU","New"],[167,"MO OPD/ETU","New"],[168,"ADDITIONAL MOH","New"],[169,"ADDITIONAL MOH","New"],[170,"MO","New"],[171,"MO","New"],[172,"MO ETU","New"],[172,"MO EYE","New"],[172,"MO ICU","New"],[172,"MO MEDICO LEGAL","New"],[172,"SHO GYN & OBS","New"],[173,"MO","Difficult station"],[174,"MO","Difficult station"],[175,"MO","New"],[175,"MO","New"],[176,"MO","Difficult station"],[177,"MO","New"],[178,"MOIC","Difficult station"],[179,"MO","New"],[179,"MO","New"],[180,"MO","Difficult station"],[181,"MO MEDICINE","New"],[181,"MO MEDICINE","New"],[182,"MO","New"],[183,"MO ANAESTHESIA","New"],[183,"MO ETU","New"],[183,"MO ETU","New"],[183,"MO GYN & OBS","New"],[183,"MO ICU","New"],[183,"MO ICU","New"],[183,"MO ICU","New"],[183,"MO ICU","New"],[183,"MO PAEDIATRICS","Special Requests"],[183,"MO SURGERY","Special Requests"],[184,"MO","New"],[184,"MO A&E","New"],[184,"MO A&E","New"],[184,"MO A&E","New"],[184,"MO ANAESTHESIA","New"],[184,"MO ANAESTHESIA","New"],[184,"MO ANAESTHESIA","New"],[184,"MO CHEMICAL PATHOLOGY","New"],[184,"MO CHEMICAL PATHOLOGY","New"],[184,"MO ENDOCRINOLOGY","New"],[184,"MO ENT","New"],[184,"MO HAEMATOLOGY","New"],[184,"MO HISTOPATHOLOGY","New"],[184,"MO MICROBIOLOGY","New"],[184,"MO ORTHOPAEDIC SURGERY","New"],[184,"MO PSYCHIATRY","New"],[184,"MO RESIDENT PHYSICIAN CLINIC","New"],[184,"MO SCBU","New"],[184,"MO SICU","New"],[184,"MO SICU","New"],[184,"MO SICU","New"],[184,"MO SICU","New"],[184,"MO SICU","New"],[184,"SHO MEDICINE","New"],[184,"SHO PAEDIATRICS","New"],[184,"SHO SURGERY","New"],[185,"MO ANAESTHESIA/ICU","New"],[185,"MO ANAESTHESIA/ICU","New"],[185,"MO ANAESTHESIA/ICU","New"],[185,"MO ANAESTHESIA/ICU","New"],[185,"MO ANAESTHESIA/ICU","New"],[185,"MO BLOOD BANK","New"],[185,"MO NEPHROLOGY","New"],[185,"MO NEPHROLOGY","New"],[185,"MO PAEDIATRIC NEPHROLOGY","New"],[185,"MO PAEDIATRIC NEPHROLOGY","New"],[185,"MO PAEDIATRIC NEPHROLOGY","New"],[186,"MO","New"],[187,"MO","New"],[187,"MO","New"],[188,"MO PAEDIATRICS/PBU","New"],[189,"MO ANAESTHESIA/ICU","New"],[189,"MO GYN & OBS","New"],[189,"MO MEDICINE","New"],[189,"MO OPD/ETU","New"],[190,"MO","New"],[191,"MO","Difficult station"],[192,"MO","Difficult station"],[193,"MO BLOOD BANK","New"],[193,"MO RADIOLOGY","New"],[194,"MO GI SURGERY","New"],[194,"MO ORTHOPAEDIC SURGERY","New"],[194,"MO ORTHOPAEDIC SURGERY","New"],[194,"MO PAEDIATRICS SURGERY","New"],[194,"MO PICU","New"],[194,"MO PLASTIC SURGERY","New"],[194,"MO VASCULAR SURGERY","New"],[195,"MO","Difficult station"],[196,"MO","Difficult station"],[197,"MO A&E","New"],[197,"MO DIALYSIS","New"],[197,"MO EYE","New"],[198,"MO","Difficult station"],[199,"MO","New"],[200,"MO","Difficult station"],[201,"MO","New"],[202,"MO","New"],[203,"MO","New"],[203,"MO","Special Requests"],[204,"MO","New"],[204,"MO","New"],[205,"MO EYE","New"],[205,"MO ORTHOPAEDIC SURGERY","New"],[205,"MO RHEUMATOLOGY","New"],[205,"SHO GYN & OBS","New"],[205,"SHO PAEDIATRICS","New"],[205,"SHO PAEDIATRICS","New"],[206,"MO","New"],[207,"MO","New"],[207,"MO","New"],[208,"MO","Difficult station"],[209,"MO","New"],[210,"MO","New"],[211,"MO ANAESTHESIA","New"],[211,"MO ANAESTHESIA","New"],[211,"MO BLOOD BANK","New"],[211,"MO DERMATOLOGY","New"],[211,"MO EYE","New"],[211,"MO MEDICO LEGAL","New"],[211,"MO PBU","New"],[211,"MO PBU","Special Requests"],[211,"MO PSYCHIATRY","New"],[211,"MO RESPIRATORY MEDICINE","New"],[211,"MO RHEUMATOLOGY","New"],[211,"SHO GYN & OBS","New"],[211,"SHO MEDICINE","New"],[211,"SHO PAEDIATRICS","New"],[211,"SHO SURGERY","New"],[212,"MO RELIEF","New"],[212,"MO RELIEF","Special Requests"],[213,"MO","New"],[214,"MO","New"],[215,"MO MEDICO LEGAL","New"],[216,"MO ANAESTHESIA","New"],[216,"MO ANAESTHESIA","New"],[216,"MO ANAESTHESIA","New"],[216,"MO ANAESTHESIA","New"],[216,"MO ANAESTHESIA","New"],[216,"MO ANAESTHESIA","New"],[216,"MO ANAESTHESIA","New"],[216,"MO CARDIOTHORACIC ANAESTHESIA","New"],[216,"MO CARDIOTHORACIC SURGERY","New"],[216,"MO CARDIOTHORACIC SURGERY","New"],[216,"MO CCU","New"],[216,"MO ENT","New"],[216,"MO ENT","New"],[216,"MO EYE","New"],[216,"MO GI SURGERY","New"],[216,"MO GU SURGERY","New"],[216,"MO GU SURGERY","New"],[216,"MO HAEMATOLOGY","New"],[216,"MO HISTOPATHOLOGY","New"],[216,"MO HISTOPATHOLOGY","New"],[216,"MO INTERVENTIONAL RADIOLOGY","New"],[216,"MO INTERVENTIONAL RADIOLOGY","New"],[216,"MO MEDICO LEGAL","New"],[216,"MO MEDICO LEGAL","New"],[216,"MO MICU","New"],[216,"MO NEPHROLOGY & DIALYSIS","New"],[216,"MO NEURO SURGERY ANAESTHESIA","New"],[216,"MO ONCO SURGERY","New"],[216,"MO PAEDIATRIC NEPHROLOGY","New"],[216,"MO PAEDIATRICS SURGERY","New"],[216,"MO PAEDIATRICS SURGERY","New"],[216,"MO RADIOLOGY","New"],[216,"MO RADIOLOGY","New"],[216,"MO RADIOLOGY","New"],[216,"MO SCBU","New"],[216,"MO SCBU","New"],[216,"MO SICU","New"],[216,"MO VASCULAR SURGERY","New"],[216,"MO VASCULAR SURGERY","New"],[216,"SHO GYN & OBS","New"],[216,"SHO MEDICINE","New"],[216,"SHO MEDICINE","New"],[216,"SHO SURGERY","New"],[216,"MO AS ANAESTHESIA","Special Requests"],[217,"MO ETU","New"],[217,"MO JMO","New"],[218,"ADDITIONAL MOH","Difficult station"],[219,"MO","New"],[220,"MO","Difficult station"],[221,"MO JMO","New"],[221,"MO ORTHOPAEDIC SURGERY","New"],[221,"SHO GYN & OBS","New"],[222,"MO","Difficult station"],[223,"ADDITIONAL MOH","New"],[224,"ADDITIONAL MOH","Difficult station"],[225,"MO","Difficult station"],[226,"MO","Difficult station"],[227,"MO","Difficult station"],[228,"MO CHEST CLINIC","New"],[229,"MO ANAESTHESIA","New"],[229,"MO ANAESTHESIA","New"],[229,"MO DIALYSIS","New"],[229,"MO ENT","New"],[229,"MO EYE","New"],[229,"MO EYE","New"],[229,"MO LAB","New"],[229,"MO ORTHOPAEDIC SURGERY","New"],[229,"MO PBU","New"],[229,"MO PBU","New"],[229,"MO PSYCHIATRY","New"],[229,"MO VP OPD","New"],[229,"SHO GYN & OBS","New"],[229,"SHO GYN & OBS","New"],[230,"MO RELIEF","New"],[230,"MO RELIEF","New"],[230,"MO RELIEF","New"],[231,"MO STD CLINIC","New"],[232,"MO","New"],[232,"MO","New"],[232,"MO MEDICINE","Difficult station"],[233,"MO","Difficult station"],[233,"MO","Difficult station"],[234,"MO","Difficult station"],[235,"MO","New"],[236,"MO","New"],[237,"MO","New"],[238,"ADDITIONAL MOH","New"],[239,"MO","New"],[240,"MO ANAESTHESIA/ICU","Difficult station"],[240,"MO ANAESTHESIA/ICU","New"],[240,"MO ANAESTHESIA/ICU","New"],[240,"MO DIALYSIS","Difficult station"],[240,"MO ETU","Difficult station"],[240,"MO ETU","Difficult station"],[240,"MO ETU","Difficult station"],[240,"MO EYE","Difficult station"],[240,"MO GYN & OBS","Difficult station"],[240,"MO GYN & OBS","Difficult station"],[240,"MO HAEMATOLOGY","Difficult station"],[240,"MO MEDICINE","Difficult station"],[240,"MO MEDICINE","Difficult station"],[240,"MO MEDICINE","Difficult station"],[240,"MO NEUROLOGY","New"],[240,"MO NICU","New"],[240,"MO OPD","Difficult station"],[240,"MO OPD","Difficult station"],[240,"MO OPD","Difficult station"],[240,"MO ORTHOPAEDIC SURGERY","Difficult station"],[240,"MO ORTHOPAEDIC SURGERY","New"],[240,"MO PAEDIATRICS","Difficult station"],[240,"MO PAEDIATRICS","Difficult station"],[240,"MO SCBU","Difficult station"],[240,"MO SCBU","Difficult station"],[240,"MO SCBU","New"],[240,"MO SURGERY","Difficult station"],[240,"MO SURGERY","Difficult station"],[241,"MO","Difficult station"],[242,"MO RELIEF","Difficult station"],[242,"MO RELIEF","Difficult station"],[243,"MO","Difficult station"],[244,"ADDITIONAL MOH","New"],[245,"MO","Difficult station"],[246,"MO","Difficult station"],[247,"MO","Difficult station"],[248,"MO","New"],[249,"MO","New"],[250,"MO","Difficult station"],[251,"MO","Difficult station"],[252,"MO","New"],[253,"MO","Difficult station"],[254,"MO","New"],[255,"MO","Difficult station"],[256,"MO","Difficult station"],[257,"MO","Difficult station"],[257,"MO","Difficult station"],[257,"MO ETU","New"],[257,"MO JMO","New"],[257,"MO MENTAL HEALTH","New"],[257,"MO MENTAL HEALTH","New"],[258,"MO ANAESTHESIA/ICU","Difficult station"],[258,"MO ANAESTHESIA/ICU","Difficult station"],[258,"MO ANAESTHESIA/ICU","Difficult station"],[258,"MO BLOOD BANK","New"],[258,"MO DERMATOLOGY","New"],[258,"MO ETU","Difficult station"],[258,"MO ETU","Difficult station"],[258,"MO GYN & OBS","Difficult station"],[258,"MO GYN & OBS","Difficult station"],[258,"MO GYN & OBS","Difficult station"],[258,"MO MEDICINE","Difficult station"],[258,"MO MEDICINE","Difficult station"],[258,"MO MENTAL HEALTH","Difficult station"],[258,"MO OPD","New"],[258,"MO PAEDIATRICS","Difficult station"],[258,"MO PSYCHIATRY","New"],[258,"MO RADIOLOGY","Difficult station"],[258,"MO SURGERY","Difficult station"],[259,"MO RELIEF","Difficult station"],[259,"MO RELIEF","Difficult station"],[259,"MO RELIEF","New"],[259,"MO RELIEF","New"],[259,"MO RELIEF","New"],[260,"MO","New"],[261,"MO","Difficult station"],[262,"MO","Difficult station"],[262,"MO","Difficult station"],[263,"MO","Difficult station"],[264,"MO","Difficult station"],[265,"MO","Difficult station"],[266,"MO","Difficult station"],[266,"MO","Difficult station"],[266,"MO","Difficult station"],[266,"MO NEPHROLOGY","Difficult station"],[267,"ADDITIONAL MOH","New"],[268,"MO","Difficult station"],[269,"MOIC","New"],[270,"MO","Difficult station"],[271,"MO","Difficult station"],[271,"MO","Difficult station"],[272,"MO","Difficult station"],[273,"MO ENT","New"],[273,"MO NICU","New"],[273,"MO OPD/ETU","New"],[273,"SHO GYN & OBS","New"],[273,"SHO GYN & OBS","New"],[273,"SHO GYN & OBS","New"],[273,"SHO PAEDIATRICS","New"],[273,"SHO PAEDIATRICS","New"],[274,"ADDITIONAL MOH","New"],[275,"ADDITIONAL MOH","New"],[276,"MO RELIEF","New"],[277,"ADDITIONAL MOH","New"],[216,"MO DERMATOLOGY","New"],[216,"MO NEUROLOGY","New"],[216,"MO SCBU","New"],[216,"MO VASCULAR SURGERY","New"],[216,"SHO GYN & OBS","New"],[278,"MO","New"],[279,"MO","New"],[280,"MO","Difficult station"],[281,"MO","New"],[282,"MO","New"],[283,"MO","New"],[284,"MO","New"],[285,"MO","Difficult station"],[286,"MO","New"],[287,"SHO SURGERY","New"],[287,"SHO SURGERY","New"],[287,"SHO SURGERY","New"],[288,"MO","New"],[289,"MO","New"],[290,"MO","Special Requests"],[290,"MO EYE","New"],[291,"MO","New"],[292,"MO","Difficult station"],[292,"MO","New"],[293,"MO","Difficult station"],[294,"MO","New"],[295,"MO BLOOD BANK","New"],[295,"MO ETU","New"],[295,"MO MEDICO LEGAL","New"],[295,"MO RADIOLOGY","New"],[295,"SHO SURGERY","New"],[296,"MO","Difficult station"],[297,"MO MEDICINE","New"],[298,"ADDITIONAL MOH","New"],[299,"MO","New"],[300,"MO A&E","New"],[300,"MO A&E","New"],[300,"MO A&E","New"],[300,"MO A&E","New"],[300,"MO A&E","New"],[300,"MO ANAESTHESIA","New"],[300,"MO BLOOD BANK","New"],[300,"MO MEDICO LEGAL","New"],[300,"MO MENTAL HEALTH","New"],[300,"MO RABIES","New"],[300,"MO RHEUMATOLOGY","New"],[300,"SHO GYN & OBS","New"],[300,"SHO GYN & OBS","New"],[300,"SHO GYN & OBS","New"],[300,"SHO MEDICINE","New"],[300,"SHO SURGERY","New"],[301,"MO","New"],[302,"MO","Difficult station"],[303,"MO","New"],[304,"MO","New"],[305,"MO RADIOLOGY","New"],[305,"SHO GYN & OBS","New"],[305,"SHO GYN & OBS","New"],[306,"SHO MEDICINE","New"],[306,"SHO MEDICINE","New"],[307,"MO","New"],[308,"MO","New"],[309,"MO","New"],[310,"MO MEDICINE","New"],[311,"MO","New"],[312,"MO","New"],[313,"MO","Difficult station"],[314,"MO","New"],[315,"MO","New"],[316,"MO STD CLINIC","New"],[317,"MO BLOOD BANK","New"],[317,"MO GASTROENTEROLOGY","New"],[317,"MO NEUROLOGY","New"],[317,"MO ONCO SURGERY","New"],[317,"MO ONCO SURGERY","New"],[317,"MO ONCOLOGY","New"],[317,"MO ORTHOPAEDIC SURGERY","New"],[317,"MO PSYCHIATRY","New"],[317,"MO PSYCHIATRY","New"],[317,"MO PSYCHIATRY","New"],[317,"MO PSYCHIATRY","New"],[317,"MO UROLOGY","New"],[317,"SHO GYN & OBS","New"],[317,"SHO GYN & OBS","New"],[317,"SHO GYN & OBS","New"],[317,"SHO GYN & OBS","New"],[317,"SHO MEDICINE","New"],[317,"SHO MEDICINE","New"],[317,"SHO MEDICINE","New"],[317,"SHO MEDICINE","New"],[317,"SHO MEDICINE","New"],[317,"SHO MEDICINE","New"],[317,"SHO PAEDIATRICS","New"],[317,"SHO PAEDIATRICS","New"],[317,"SHO PAEDIATRICS","New"],[317,"SHO PAEDIATRICS","New"],[317,"SHO PAEDIATRICS","New"],[317,"SHO PAEDIATRICS","New"],[317,"SHO SURGERY","New"],[317,"SHO SURGERY","New"],[317,"SHO SURGERY","New"],[317,"SHO SURGERY","New"],[317,"SHO SURGERY","New"],[318,"MO","Difficult station"],[318,"MO","Difficult station"],[319,"MO","New"],[320,"MO","New"],[321,"MO","New"],[322,"MO","New"],[323,"MO ANAESTHESIA","New"],[323,"MO HISTOPATHOLOGY","New"],[323,"MO MEDICO LEGAL","New"],[323,"MO PBU","New"],[323,"MO PBU","New"],[323,"SHO PAEDIATRICS","New"],[323,"SHO PAEDIATRICS","New"],[324,"MO ANAESTHESIA","New"],[324,"MO ETU","New"],[324,"MO PSYCHIATRY","New"],[324,"MO RADIOLOGY","New"],[324,"SHO MEDICINE","New"],[325,"MO A&E","New"],[325,"MO A&E","New"],[325,"MO A&E","New"],[325,"MO A&E","New"],[325,"MO A&E","New"],[325,"MO ANAESTHESIA/ICU","New"],[325,"MO CARDIO ELECTROPHYSIOLOGY","New"],[325,"MO CARDIO ELECTROPHYSIOLOGY","New"],[325,"MO ECMO","New"],[325,"MO ECMO","New"],[325,"MO ETU","New"],[325,"MO GASTROENTEROLOGY","New"],[325,"MO GASTROENTEROLOGY","New"],[325,"MO GI SURGERY","New"],[325,"MO GI SURGERY","New"],[325,"MO GI SURGERY","New"],[325,"MO NEPHROLOGY & ICU","New"],[325,"MO NEPHROLOGY & ICU","New"],[325,"MO NEPHROLOGY & ICU","New"],[325,"MO NEURO SURGERY","New"],[325,"MO NEURO SURGERY","New"],[325,"MO ONCO SURGERY","New"],[325,"MO ONCO SURGERY","New"],[325,"MO PAEDIATRIC NEPHROLOGY","New"],[325,"MO PICU","New"],[325,"MO PICU","New"],[325,"MO PICU","New"],[325,"SHO SURGERY","New"],[326,"ADDITIONAL MOH","New"],[327,"ADDITIONAL MOH","New"],[328,"MO","New"],[329,"MO","New"],[329,"MO","New"],[330,"MO MEDICINE","New"],[330,"MO MEDICINE","New"],[330,"MO MEDICO LEGAL","New"],[330,"MO OPD/ETU","New"],[330,"MO OPD/ETU","New"],[331,"MO","New"],[332,"MO","Difficult station"],[333,"ADDITIONAL MOH","New"],[334,"MO","New"],[335,"MO","New"],[336,"MO","New"],[337,"MO","New"],[338,"MO","New"],[339,"MO CHEST CLINIC","New"],[340,"MO ANAESTHESIA","New"],[340,"MO ANAESTHESIA","New"],[340,"MO ENDOCRINOLOGY","New"],[340,"MO ENT","New"],[340,"MO ETU","New"],[340,"MO HAEMATOLOGY","New"],[340,"MO MEDICO LEGAL","New"],[340,"MO ORTHOPAEDIC SURGERY","New"],[340,"SHO MEDICINE","New"],[340,"SHO SURGERY","New"],[341,"MO RELIEF","New"],[342,"MO","New"],[343,"ADDITIONAL MOH","New"],[344,"MO","New"],[345,"MO","New"],[346,"MO BLOOD BANK","New"],[346,"MO CARDIOLOGY","New"],[346,"MO PAEDIATRICS","New"],[346,"MO RADIOLOGY","New"],[346,"MO RADIOLOGY","New"],[347,"MO BLOOD BANK","New"],[347,"MO ETU","New"],[347,"MO ETU","New"],[347,"MO MEDICINE","New"],[347,"MO MENTAL HEALTH","New"],[347,"MO PBU","New"],[347,"MO PBU","New"],[348,"MO","Special Requests"],[349,"MO BLOOD BANK","New"],[349,"MO GYN & OBS","New"],[349,"MO GYN & OBS","New"],[349,"MO MEDICINE","New"],[349,"MO MENTAL HEALTH","New"],[350,"MO","New"],[351,"MO ANAESTHESIA","New"],[351,"MO ANAESTHESIA","New"],[351,"MO BLOOD BANK","New"],[351,"MO GYN & OBS","New"],[351,"MO GYN & OBS","New"],[351,"MO MEDICINE","New"],[351,"MO OPD/ETU","New"],[351,"MO OPD/ETU","New"],[351,"MO OPD/ETU","New"],[351,"MO PAEDIATRICS","New"],[351,"MO PAEDIATRICS","New"],[351,"MO PAEDIATRICS","Special Requests"],[351,"MO RADIOLOGY","New"],[351,"MO SURGERY","New"],[352,"MO ANAESTHESIA/ICU","New"],[352,"MO ETU","New"],[352,"MO PBU","New"],[352,"MO SURGERY","New"],[352,"SHO GYN & OBS","New"],[352,"SHO MEDICINE","New"],[352,"SHO PAEDIATRICS","New"],[353,"MO","New"],[354,"MO ANAESTHESIA","New"],[354,"MO ANAESTHESIA","New"],[354,"MO BLOOD BANK","New"],[354,"MO ETU","New"],[354,"MO MICROBIOLOGY","New"],[354,"MO MICU","New"],[354,"MO ORTHOPAEDIC SURGERY","New"],[354,"SHO MEDICINE","New"],[355,"MO RELIEF","New"],[356,"MO","New"],[357,"ADDITIONAL MOH","New"],[358,"MO","Difficult station"],[359,"MO","New"],[360,"ADDITIONAL MOH","New"],[361,"MO ANAESTHESIA","New"],[361,"MO ANAESTHESIA","New"],[361,"MO ANAESTHESIA","New"],[361,"MO ANAESTHESIA","New"],[361,"MO ANAESTHESIA","New"],[361,"MO ANAESTHESIA","New"],[361,"MO ANAESTHESIA","New"],[361,"MO ANAESTHESIA","New"],[361,"MO ANAESTHESIA","New"],[361,"MO ANAESTHESIA","New"],[361,"MO CARDIOLOGY","New"],[361,"MO CARDIOLOGY","New"],[361,"MO DERMATOLOGY","New"],[361,"MO ENT","New"],[361,"MO ENT","New"],[361,"MO ETU","New"],[361,"MO GI SURGERY","New"],[361,"MO GU SURGERY","New"],[361,"MO HAEMATOLOGY","New"],[361,"MO ICU/HDU","New"],[361,"MO MEDICO LEGAL","New"],[361,"MO MENTAL HEALTH","New"],[361,"MO MICU","New"],[361,"MO MICU","New"],[361,"MO NEURO SURGERY","New"],[361,"MO NEURO SURGERY","New"],[361,"MO NEUROLOGY","New"],[361,"MO NEUROLOGY","New"],[361,"MO NICU","New"],[361,"MO NICU","New"],[361,"MO ONCO SURGERY","New"],[361,"MO ONCO SURGERY","New"],[361,"MO ONCOLOGY","New"],[361,"MO ORTHOPAEDIC SURGERY","New"],[361,"MO ORTHOPAEDIC SURGERY","New"],[361,"MO ORTHOPAEDIC SURGERY","New"],[361,"MO ORTHOPAEDIC SURGERY","New"],[361,"MO PAEDIATRIC NEPHROLOGY","New"],[361,"MO PAEDIATRIC PULMONOLOGY","New"],[361,"MO PATHOLOGY","New"],[361,"MO SICU","New"],[361,"MO VASCULAR SURGERY","New"],[361,"SHO GYN & OBS","New"],[361,"SHO GYN & OBS","New"],[361,"SHO GYN & OBS","New"],[361,"SHO MEDICINE","New"],[361,"SHO MEDICINE","New"],[361,"SHO PAEDIATRICS","New"],[361,"SHO PAEDIATRICS","New"],[361,"SHO SURGERY","New"],[361,"SHO SURGERY","New"],[361,"SHO SURGERY","New"],[361,"SHO MEDICINE","Special Requests"],[361,"SHO SURGERY","Special Requests"],[362,"MO","Difficult station"],[363,"MO MEDICO LEGAL","New"],[363,"MO OPD/ETU","New"],[363,"MO OPD/ETU","New"],[363,"MO OPD/ETU","New"],[363,"MO PAEDIATRICS","New"],[364,"MO","New"],[365,"MO","Special Requests"],[366,"MO","New"],[367,"MO","Difficult station"],[368,"MO","New"],[369,"MO","New"],[369,"MO","New"],[370,"MO","Difficult station"],[371,"MO","Difficult station"],[372,"MO","Special Requests"],[373,"MO","Difficult station"],[374,"MO","New"],[375,"MO","New"],[375,"MO","New"],[376,"MO","Special Requests"],[377,"MO","Difficult station"],[378,"MO","New"],[378,"MO ANAESTHESIA/ICU","New"],[378,"MO ANAESTHESIA/ICU","New"],[378,"MO BLOOD BANK","New"],[378,"MO HAEMATOLOGY","New"],[378,"MO OPD/ETU","New"],[378,"MO OPD/ETU","New"],[378,"MO OPD/ETU","New"],[378,"MO OPD/ETU","New"],[378,"MO OPD/ETU","New"],[378,"MO PATHOLOGY","New"],[378,"MO PSYCHIATRY","New"],[378,"MO RADIOLOGY","New"],[378,"MO RADIOLOGY","New"],[378,"SHO SURGERY","New"],[379,"MO","Difficult station"],[379,"MO","New"],[380,"MO","New"],[381,"MO","Difficult station"],[382,"MO","New"],[383,"ADDITIONAL MOH","New"],[384,"MO","Difficult station"],[385,"MO","New"],[386,"MO","Difficult station"],[387,"MO OPD/ETU","New"],[387,"MO OPD/ETU","New"],[387,"MO PAEDIATRICS","New"],[388,"MO","New"],[389,"MO BLOOD BANK","New"],[389,"MO GYN & OBS","New"],[389,"MO PAEDIATRICS","New"],[389,"MO PAEDIATRICS","New"],[389,"MO SURGERY","New"],[390,"MO","New"],[391,"MO","Difficult station"],[392,"MO","Difficult station"],[393,"MO","New"],[394,"MO","New"],[395,"MO","New"],[396,"MO","New"],[397,"MO","New"],[398,"MO","Difficult station"],[399,"MO","New"],[400,"ADDITIONAL MOH","New"],[401,"MO ANAESTHESIA","New"],[401,"MO ENT","New"],[401,"MO ENT","New"],[401,"MO ETU/PCU","New"],[401,"MO ETU/PCU","New"],[401,"MO ETU/PCU","New"],[401,"MO ETU/PCU","New"],[401,"MO EYE","New"],[401,"MO EYE","New"],[401,"MO ICU","New"],[401,"MO ICU","New"],[401,"MO MEDICO LEGAL","New"],[401,"MO NCD","New"],[401,"MO ONCOLOGY","New"],[401,"MO ORTHOPAEDIC SURGERY","New"],[401,"MO PBU","New"],[401,"MO PLANNING","New"],[401,"SHO MEDICINE","New"],[401,"SHO MEDICINE","New"],[401,"SHO MEDICINE","New"],[401,"SHO PAEDIATRICS","New"],[401,"SHO SURGERY","New"],[401,"SHO SURGERY","New"],[401,"SHO SURGERY","New"],[401,"SHO SURGERY","New"],[402,"MO RELIEF","New"],[402,"MO RELIEF","New"],[403,"MO","Difficult station"],[404,"MO BLOOD BANK","New"],[404,"MO NEPHROLOGY","New"],[404,"MO OPD","New"],[404,"MO OPD","New"],[405,"ADDITIONAL MOH","New"],[406,"MO","New"],[407,"MO PAEDIATRICS","New"],[407,"MO SURGERY","New"],[408,"MO ANAESTHESIA","New"],[408,"MO ORTHOPAEDIC SURGERY","New"],[408,"MO PAEDIATRICS","New"],[409,"MO PLANNING","Special Requests"],[410,"MO","New"],[411,"ADDITIONAL MOH","New"],[412,"MO","New"],[413,"MO MEDICO LEGAL","New"],[414,"MO","New"],[415,"MO","New"],[415,"MO","New"],[416,"MO","New"],[417,"MO","New"],[417,"MO","New"],[417,"MO","New"],[417,"MO","New"],[417,"MO","New"],[417,"MO","New"],[418,"MO","New"],[419,"ADDITIONAL MOH","New"],[420,"ADDITIONAL MOH","New"],[421,"MO","New"],[422,"MO","New"],[423,"MO","New"],[424,"MO A&E","New"],[424,"SHO GYN & OBS","New"],[424,"SHO SURGERY","New"],[424,"SHO SURGERY","New"],[425,"MO","New"],[426,"MO ETU/PCU/HDU","New"],[426,"MO ICU","New"],[426,"MO PICU","New"],[426,"MO PICU","New"],[426,"MO PICU","New"],[426,"MO PICU","New"],[426,"MO PSYCHIATRY","New"],[426,"MO PSYCHIATRY","New"],[426,"MO RESPIRATORY MEDICINE","New"],[426,"MO RESPIRATORY MEDICINE","New"],[426,"SHO GYN & OBS","New"],[427,"MO","New"],[428,"MO","New"],[429,"MO","New"],[430,"ADDITIONAL MOH","New"],[431,"MO PCU","New"],[432,"MO PBU","New"],[433,"MO GYN & OBS","New"],[433,"MO MEDICINE","New"],[433,"MO MEDICINE","New"],[433,"MO OPD/ETU","New"],[433,"MO OPD/ETU","New"],[433,"MO PAEDIATRICS","New"],[433,"MO PSYCHIATRY","New"],[433,"MO RADIOLOGY","New"],[434,"MO","New"]],"districts":{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"Jaffna"},"geometry":{"type":"MultiPolygon","coordinates":[[[[79.725,9.524],[79.692,9.531],[79.67,9.554],[79.66,9.556],[79.651,9.547],[79.655,9.505],[79.705,9.476],[79.72,9.474],[79.732,9.492],[79.725,9.524]]],[[[79.783,9.687],[79.764,9.66],[79.77,9.651],[79.787,9.666],[79.783,9.687]]],[[[79.812,9.685],[79.812,9.702],[79.814,9.716],[79.807,9.695],[79.812,9.685]]],[[[79.855,9.746],[79.861,9.727],[79.85,9.713],[79.88,9.704],[79.893,9.714],[79.888,9.728],[79.897,9.754],[79.892,9.764],[79.902,9.767],[79.863,9.762],[79.855,9.746]]],[[[80.622,9.46],[80.361,9.665],[80.322,9.711],[80.247,9.829],[80.212,9.836],[80.169,9.825],[80.14,9.825],[80.101,9.809],[80.044,9.816],[80.03,9.823],[80.027,9.823],[80.036,9.818],[79.971,9.805],[79.948,9.795],[79.936,9.781],[79.907,9.769],[79.908,9.754],[79.926,9.739],[79.93,9.714],[79.946,9.69],[79.955,9.689],[79.964,9.701],[79.967,9.716],[79.973,9.721],[79.972,9.729],[79.973,9.732],[79.974,9.721],[79.967,9.713],[79.967,9.698],[79.98,9.685],[79.989,9.692],[79.998,9.688],[79.998,9.672],[80.013,9.654],[80.04,9.646],[80.047,9.65],[80.096,9.619],[80.134,9.608],[80.082,9.641],[80.077,9.66],[80.137,9.626],[80.2,9.581],[80.208,9.586],[80.184,9.596],[80.173,9.636],[80.162,9.636],[80.157,9.645],[80.162,9.652],[80.174,9.655],[80.255,9.615],[80.295,9.691],[80.332,9.649],[80.401,9.611],[80.447,9.575],[80.456,9.555],[80.455,9.54],[80.473,9.521],[80.601,9.459],[80.622,9.46]]],[[[79.839,9.612],[79.854,9.604],[79.842,9.606],[79.85,9.596],[79.837,9.599],[79.835,9.592],[79.82,9.602],[79.82,9.626],[79.818,9.621],[79.81,9.625],[79.805,9.601],[79.811,9.599],[79.809,9.59],[79.803,9.59],[79.803,9.578],[79.843,9.568],[79.861,9.571],[79.862,9.607],[79.844,9.619],[79.839,9.612]]],[[[79.774,9.585],[79.775,9.62],[79.771,9.622],[79.763,9.613],[79.763,9.59],[79.774,9.585]]],[[[79.861,9.617],[79.852,9.634],[79.854,9.623],[79.86,9.617],[79.861,9.617]]],[[[79.982,9.622],[79.984,9.636],[79.963,9.634],[79.923,9.661],[79.932,9.666],[79.928,9.669],[79.935,9.677],[79.919,9.68],[79.923,9.677],[79.906,9.672],[79.915,9.652],[79.896,9.674],[79.899,9.684],[79.887,9.699],[79.872,9.693],[79.862,9.704],[79.841,9.703],[79.85,9.691],[79.844,9.685],[79.847,9.676],[79.857,9.661],[79.868,9.659],[79.873,9.67],[79.878,9.666],[79.864,9.654],[79.869,9.639],[79.9,9.616],[79.908,9.618],[79.918,9.633],[79.935,9.631],[79.971,9.612],[79.981,9.622],[79.985,9.613],[79.978,9.605],[79.965,9.608],[79.988,9.597],[80.001,9.604],[80.008,9.629],[79.995,9.651],[79.991,9.641],[79.986,9.643],[79.99,9.63],[79.982,9.622]]]]}},{"type":"Feature","properties":{"name":"Kilinochchi"},"geometry":{"type":"MultiPolygon","coordinates":[[[[80.005,9.485],[80.015,9.467],[80.018,9.481],[80.005,9.485]]],[[[79.984,9.307],[79.972,9.296],[79.972,9.286],[79.978,9.28],[79.991,9.284],[80.002,9.271],[80.005,9.287],[79.992,9.288],[79.995,9.293],[79.984,9.307]]],[[[80.052,9.338],[80.061,9.331],[80.057,9.348],[80.052,9.338]]],[[[80.255,9.615],[80.342,9.561],[80.385,9.513],[80.39,9.519],[80.405,9.52],[80.403,9.513],[80.391,9.515],[80.397,9.504],[80.39,9.484],[80.352,9.467],[80.34,9.473],[80.332,9.455],[80.312,9.462],[80.306,9.458],[80.313,9.448],[80.306,9.45],[80.309,9.448],[80.307,9.442],[80.302,9.456],[80.292,9.459],[80.293,9.452],[80.286,9.45],[80.288,9.456],[80.236,9.474],[80.278,9.475],[80.255,9.488],[80.248,9.506],[80.261,9.497],[80.282,9.495],[80.224,9.535],[80.221,9.528],[80.198,9.538],[80.196,9.545],[80.171,9.544],[80.143,9.559],[80.126,9.578],[80.113,9.575],[80.103,9.588],[80.066,9.6],[80.062,9.611],[80.052,9.599],[80.09,9.579],[80.147,9.535],[80.186,9.486],[80.18,9.471],[80.17,9.467],[80.145,9.436],[80.054,9.39],[80.063,9.331],[80.089,9.326],[80.123,9.297],[80.11,9.276],[80.121,9.254],[80.116,9.243],[80.12,9.212],[80.115,9.209],[80.149,9.211],[80.192,9.237],[80.218,9.234],[80.214,9.277],[80.241,9.297],[80.264,9.303],[80.279,9.298],[80.321,9.308],[80.395,9.301],[80.407,9.308],[80.408,9.34],[80.519,9.345],[80.532,9.405],[80.559,9.376],[80.585,9.363],[80.586,9.408],[80.61,9.426],[80.614,9.443],[80.607,9.449],[80.616,9.448],[80.614,9.457],[80.473,9.521],[80.455,9.54],[80.456,9.555],[80.447,9.575],[80.401,9.611],[80.332,9.649],[80.295,9.691],[80.255,9.615]]]]}},{"type":"Feature","properties":{"name":"Mannar"},"geometry":{"type":"MultiPolygon","coordinates":[[[[80.115,9.209],[80.105,9.194],[80.1,9.16],[80.076,9.127],[80.072,9.078],[80.042,9.016],[80.016,9.013],[79.991,8.996],[79.987,8.976],[79.968,8.969],[79.948,8.947],[79.921,8.946],[79.911,8.939],[79.932,8.916],[79.927,8.911],[79.936,8.901],[79.928,8.902],[79.929,8.873],[79.915,8.813],[79.96,8.724],[79.95,8.712],[79.952,8.68],[79.942,8.651],[79.948,8.632],[79.92,8.594],[79.92,8.567],[79.938,8.556],[79.949,8.559],[79.965,8.55],[79.978,8.553],[79.992,8.542],[80.001,8.545],[80.008,8.536],[80.043,8.522],[80.05,8.522],[80.055,8.637],[80.044,8.673],[80.08,8.654],[80.114,8.649],[80.235,8.68],[80.194,8.733],[80.171,8.749],[80.178,8.775],[80.198,8.765],[80.23,8.828],[80.297,8.82],[80.318,8.831],[80.371,8.84],[80.402,8.857],[80.38,8.936],[80.35,8.957],[80.175,8.95],[80.177,8.971],[80.19,8.979],[80.176,8.997],[80.195,9.046],[80.22,9.055],[80.216,9.097],[80.226,9.113],[80.217,9.143],[80.195,9.176],[80.192,9.237],[80.149,9.211],[80.115,9.209]]],[[[79.914,8.942],[79.918,8.955],[79.913,8.957],[79.903,8.942],[79.914,8.942]]],[[[79.902,8.947],[79.909,8.956],[79.903,8.962],[79.891,8.956],[79.902,8.947]]],[[[79.891,8.956],[79.886,8.965],[79.895,8.962],[79.913,8.975],[79.927,8.976],[79.927,8.983],[79.883,9.013],[79.853,9.061],[79.871,9.037],[79.928,9.01],[79.862,9.073],[79.798,9.096],[79.75,9.106],[79.71,9.105],[79.69,9.091],[79.698,9.083],[79.686,9.076],[79.713,9.077],[79.747,9.068],[79.812,9.035],[79.861,8.994],[79.891,8.956]]]]}},{"type":"Feature","properties":{"name":"Mullaitivu"},"geometry":{"type":"Polygon","coordinates":[[[80.614,9.457],[80.616,9.448],[80.607,9.449],[80.614,9.443],[80.61,9.426],[80.586,9.408],[80.585,9.363],[80.559,9.376],[80.532,9.405],[80.519,9.345],[80.408,9.34],[80.407,9.308],[80.395,9.301],[80.321,9.308],[80.279,9.298],[80.264,9.303],[80.234,9.295],[80.214,9.277],[80.218,9.234],[80.192,9.237],[80.195,9.176],[80.217,9.143],[80.226,9.113],[80.216,9.097],[80.22,9.055],[80.195,9.046],[80.176,8.997],[80.19,8.979],[80.177,8.971],[80.175,8.95],[80.34,8.959],[80.391,8.991],[80.434,9.03],[80.426,9.091],[80.404,9.091],[80.404,9.115],[80.491,9.118],[80.51,9.094],[80.513,9.077],[80.53,9.076],[80.56,9.107],[80.585,9.111],[80.582,9.126],[80.646,9.117],[80.652,9.078],[80.668,9.075],[80.682,9.083],[80.692,9.074],[80.677,9.032],[80.685,9.031],[80.718,9.052],[80.787,9.01],[80.766,8.937],[80.775,8.947],[80.833,8.96],[80.87,8.96],[80.89,8.981],[80.9,8.979],[80.902,8.985],[80.92,8.986],[80.927,8.992],[80.919,8.992],[80.921,9.01],[80.917,9.012],[80.908,8.998],[80.877,9.025],[80.897,9.05],[80.951,8.989],[80.964,8.989],[80.879,9.134],[80.845,9.231],[80.811,9.293],[80.671,9.42],[80.671,9.411],[80.723,9.356],[80.722,9.35],[80.716,9.354],[80.71,9.369],[80.665,9.404],[80.67,9.421],[80.622,9.46],[80.614,9.457]]]}},{"type":"Feature","properties":{"name":"Vavuniya"},"geometry":{"type":"Polygon","coordinates":[[[80.235,8.68],[80.237,8.629],[80.25,8.616],[80.274,8.611],[80.288,8.561],[80.338,8.546],[80.352,8.573],[80.37,8.575],[80.38,8.584],[80.381,8.622],[80.399,8.634],[80.411,8.66],[80.422,8.662],[80.424,8.674],[80.444,8.689],[80.451,8.693],[80.507,8.658],[80.52,8.659],[80.53,8.673],[80.57,8.7],[80.574,8.717],[80.589,8.722],[80.601,8.744],[80.618,8.753],[80.634,8.78],[80.653,8.795],[80.627,8.837],[80.592,8.848],[80.595,8.87],[80.668,8.871],[80.712,8.899],[80.753,8.905],[80.787,9.01],[80.718,9.052],[80.685,9.031],[80.677,9.032],[80.692,9.074],[80.682,9.083],[80.668,9.075],[80.652,9.078],[80.646,9.117],[80.637,9.12],[80.634,9.116],[80.622,9.124],[80.582,9.126],[80.585,9.111],[80.56,9.107],[80.53,9.076],[80.513,9.077],[80.51,9.094],[80.491,9.118],[80.404,9.115],[80.404,9.091],[80.426,9.091],[80.434,9.03],[80.391,8.991],[80.34,8.959],[80.38,8.936],[80.402,8.857],[80.371,8.84],[80.318,8.831],[80.297,8.82],[80.23,8.828],[80.198,8.765],[80.178,8.775],[80.171,8.749],[80.194,8.733],[80.235,8.68]]]}},{"type":"Feature","properties":{"name":"Galle"},"geometry":{"type":"Polygon","coordinates":[[[79.988,6.44],[80.01,6.368],[80.028,6.331],[80.028,6.314],[80.038,6.293],[80.033,6.269],[80.052,6.236],[80.063,6.191],[80.089,6.166],[80.099,6.148],[80.1,6.131],[80.123,6.111],[80.124,6.102],[80.191,6.043],[80.209,6.036],[80.217,6.024],[80.222,6.036],[80.231,6.035],[80.229,6.03],[80.239,6.032],[80.243,6.028],[80.235,6.017],[80.243,6.005],[80.249,6.01],[80.265,5.999],[80.315,5.991],[80.371,5.967],[80.385,5.967],[80.382,5.984],[80.391,6.009],[80.423,6.019],[80.412,6.032],[80.392,6.034],[80.389,6.055],[80.405,6.053],[80.411,6.069],[80.437,6.086],[80.439,6.094],[80.421,6.111],[80.406,6.114],[80.4,6.128],[80.386,6.138],[80.385,6.165],[80.396,6.172],[80.388,6.186],[80.403,6.19],[80.383,6.221],[80.427,6.214],[80.44,6.226],[80.436,6.237],[80.441,6.24],[80.435,6.248],[80.439,6.255],[80.422,6.273],[80.413,6.293],[80.394,6.303],[80.377,6.325],[80.405,6.334],[80.446,6.301],[80.454,6.289],[80.475,6.28],[80.486,6.285],[80.496,6.3],[80.485,6.321],[80.464,6.339],[80.461,6.352],[80.478,6.365],[80.495,6.368],[80.494,6.378],[80.472,6.378],[80.441,6.395],[80.432,6.389],[80.419,6.392],[80.381,6.426],[80.369,6.427],[80.313,6.397],[80.29,6.392],[80.301,6.335],[80.297,6.325],[80.241,6.377],[80.217,6.38],[80.207,6.372],[80.207,6.36],[80.189,6.354],[80.155,6.367],[80.131,6.366],[80.114,6.386],[80.087,6.402],[80.07,6.398],[80.061,6.408],[80.03,6.42],[80.019,6.434],[80.008,6.437],[79.999,6.427],[79.988,6.44]]]}},{"type":"Feature","properties":{"name":"Hambantota"},"geometry":{"type":"Polygon","coordinates":[[[80.704,6.307],[80.657,6.303],[80.664,6.287],[80.653,6.271],[80.661,6.26],[80.639,6.253],[80.608,6.2],[80.611,6.189],[80.629,6.181],[80.637,6.17],[80.66,6.174],[80.662,6.166],[80.647,6.141],[80.648,6.133],[80.66,6.129],[80.664,6.119],[80.687,6.124],[80.696,6.116],[80.68,6.102],[80.682,6.09],[80.694,6.076],[80.692,6.063],[80.662,6.052],[80.655,6.043],[80.664,6.039],[80.667,6.025],[80.692,6.027],[80.699,6.018],[80.687,6.009],[80.688,5.991],[80.703,5.993],[80.738,5.972],[80.736,5.982],[80.75,5.989],[80.745,5.991],[80.749,5.998],[80.781,6.006],[80.801,6.023],[80.799,6.03],[80.807,6.037],[80.847,6.045],[80.861,6.042],[80.871,6.058],[80.936,6.075],[80.943,6.084],[80.977,6.087],[81.001,6.101],[81.057,6.111],[81.094,6.109],[81.097,6.114],[81.104,6.113],[81.097,6.114],[81.102,6.118],[81.097,6.128],[81.106,6.127],[81.106,6.117],[81.128,6.12],[81.13,6.132],[81.188,6.159],[81.226,6.165],[81.236,6.18],[81.324,6.199],[81.341,6.224],[81.401,6.251],[81.438,6.294],[81.481,6.311],[81.504,6.35],[81.557,6.367],[81.567,6.373],[81.567,6.382],[81.6,6.4],[81.619,6.417],[81.616,6.428],[81.649,6.446],[81.661,6.464],[81.693,6.486],[81.708,6.511],[81.677,6.52],[81.662,6.54],[81.638,6.542],[81.621,6.571],[81.608,6.58],[81.6,6.561],[81.589,6.561],[81.581,6.551],[81.565,6.555],[81.547,6.536],[81.533,6.536],[81.524,6.52],[81.482,6.496],[81.479,6.473],[81.486,6.464],[81.476,6.449],[81.48,6.419],[81.472,6.408],[81.44,6.42],[81.401,6.406],[81.393,6.415],[81.384,6.398],[81.373,6.398],[81.367,6.391],[81.278,6.369],[81.273,6.355],[81.254,6.341],[81.226,6.345],[81.221,6.35],[81.224,6.358],[81.211,6.367],[81.184,6.405],[81.157,6.393],[81.151,6.4],[81.145,6.398],[81.137,6.421],[81.101,6.418],[81.071,6.424],[81.062,6.411],[81.049,6.422],[81.049,6.407],[81.037,6.391],[81.013,6.396],[81.008,6.388],[81.007,6.369],[81.023,6.359],[81.018,6.345],[80.968,6.325],[80.921,6.296],[80.931,6.288],[80.934,6.273],[80.941,6.271],[80.953,6.239],[80.94,6.228],[80.931,6.24],[80.91,6.238],[80.893,6.249],[80.882,6.246],[80.869,6.267],[80.858,6.272],[80.798,6.267],[80.704,6.307]]]}},{"type":"Feature","properties":{"name":"Matara"},"geometry":{"type":"Polygon","coordinates":[[[80.382,5.965],[80.419,5.955],[80.426,5.97],[80.438,5.972],[80.454,5.963],[80.452,5.948],[80.444,5.947],[80.454,5.941],[80.52,5.935],[80.557,5.941],[80.578,5.935],[80.584,5.92],[80.591,5.919],[80.595,5.926],[80.62,5.933],[80.623,5.945],[80.64,5.944],[80.649,5.955],[80.697,5.963],[80.722,5.96],[80.717,5.965],[80.722,5.982],[80.703,5.993],[80.688,5.991],[80.687,6.009],[80.699,6.018],[80.694,6.025],[80.667,6.025],[80.664,6.039],[80.655,6.043],[80.662,6.052],[80.692,6.063],[80.694,6.076],[80.682,6.09],[80.68,6.102],[80.696,6.116],[80.694,6.121],[80.664,6.119],[80.66,6.129],[80.648,6.133],[80.647,6.141],[80.662,6.166],[80.66,6.174],[80.637,6.17],[80.629,6.181],[80.611,6.189],[80.608,6.2],[80.639,6.253],[80.661,6.26],[80.653,6.271],[80.664,6.287],[80.657,6.303],[80.67,6.306],[80.67,6.319],[80.675,6.322],[80.657,6.337],[80.663,6.34],[80.661,6.354],[80.611,6.346],[80.607,6.36],[80.617,6.371],[80.619,6.396],[80.555,6.389],[80.55,6.396],[80.545,6.389],[80.534,6.388],[80.534,6.374],[80.482,6.367],[80.461,6.352],[80.464,6.339],[80.485,6.321],[80.496,6.3],[80.486,6.285],[80.475,6.28],[80.454,6.289],[80.446,6.301],[80.405,6.334],[80.379,6.328],[80.386,6.31],[80.413,6.293],[80.422,6.273],[80.439,6.255],[80.435,6.248],[80.441,6.24],[80.436,6.237],[80.44,6.226],[80.427,6.214],[80.383,6.221],[80.403,6.19],[80.388,6.186],[80.396,6.172],[80.385,6.165],[80.386,6.138],[80.4,6.128],[80.406,6.114],[80.421,6.111],[80.439,6.094],[80.437,6.086],[80.411,6.069],[80.405,6.053],[80.389,6.055],[80.392,6.034],[80.412,6.032],[80.423,6.019],[80.391,6.009],[80.382,5.965]]]}},{"type":"Feature","properties":{"name":"Ampara"},"geometry":{"type":"Polygon","coordinates":[[[81.708,6.511],[81.74,6.574],[81.763,6.596],[81.761,6.609],[81.778,6.647],[81.771,6.659],[81.773,6.672],[81.8,6.708],[81.803,6.734],[81.826,6.764],[81.819,6.788],[81.823,6.814],[81.84,6.837],[81.832,6.852],[81.846,6.872],[81.845,6.911],[81.879,7.022],[81.869,7.049],[81.857,7.122],[81.87,7.275],[81.866,7.324],[81.839,7.415],[81.823,7.437],[81.814,7.48],[81.793,7.471],[81.776,7.482],[81.761,7.46],[81.725,7.455],[81.69,7.421],[81.674,7.414],[81.67,7.401],[81.664,7.399],[81.661,7.472],[81.648,7.503],[81.65,7.525],[81.619,7.508],[81.518,7.509],[81.494,7.515],[81.499,7.522],[81.452,7.543],[81.433,7.57],[81.448,7.62],[81.446,7.642],[81.383,7.657],[81.368,7.667],[81.329,7.719],[81.326,7.733],[81.263,7.736],[81.254,7.731],[81.241,7.739],[81.234,7.722],[81.239,7.713],[81.239,7.68],[81.223,7.672],[81.221,7.654],[81.214,7.647],[81.198,7.661],[81.118,7.69],[81.094,7.725],[81.069,7.731],[81.049,7.719],[80.989,7.722],[80.993,7.699],[80.988,7.689],[80.995,7.661],[80.982,7.643],[80.978,7.625],[80.986,7.611],[81.013,7.596],[81.016,7.553],[81.03,7.538],[81.042,7.505],[81.056,7.506],[81.065,7.515],[81.076,7.512],[81.113,7.545],[81.164,7.57],[81.188,7.574],[81.205,7.555],[81.207,7.516],[81.199,7.501],[81.199,7.472],[81.183,7.444],[81.201,7.396],[81.194,7.378],[81.22,7.333],[81.237,7.342],[81.246,7.335],[81.246,7.326],[81.272,7.291],[81.267,7.282],[81.277,7.255],[81.287,7.249],[81.285,7.241],[81.305,7.257],[81.323,7.263],[81.321,7.338],[81.344,7.336],[81.367,7.343],[81.365,7.357],[81.374,7.359],[81.386,7.371],[81.374,7.398],[81.375,7.41],[81.389,7.408],[81.406,7.417],[81.408,7.433],[81.422,7.436],[81.456,7.458],[81.479,7.455],[81.462,7.43],[81.477,7.422],[81.472,7.393],[81.491,7.338],[81.479,7.325],[81.519,7.29],[81.528,7.254],[81.523,7.243],[81.534,7.24],[81.553,7.218],[81.522,7.198],[81.5,7.149],[81.513,7.136],[81.511,7.118],[81.521,7.097],[81.596,7.07],[81.614,7.068],[81.619,7.049],[81.607,7.026],[81.621,6.998],[81.618,6.979],[81.637,6.96],[81.629,6.913],[81.608,6.58],[81.621,6.571],[81.638,6.542],[81.662,6.54],[81.677,6.52],[81.708,6.511]]]}},{"type":"Feature","properties":{"name":"Anuradhapura"},"geometry":{"type":"Polygon","coordinates":[[[80.032,8.527],[80.043,8.493],[80.032,8.465],[80.02,8.445],[79.99,8.423],[79.991,8.414],[79.977,8.397],[79.956,8.394],[79.952,8.375],[79.975,8.337],[79.982,8.277],[79.996,8.254],[80.0,8.228],[80.028,8.227],[80.038,8.238],[80.062,8.22],[80.079,8.224],[80.086,8.211],[80.097,8.209],[80.102,8.197],[80.123,8.181],[80.184,8.162],[80.188,8.151],[80.207,8.154],[80.215,8.144],[80.251,8.133],[80.266,8.115],[80.308,8.117],[80.37,8.058],[80.392,8.048],[80.405,8.055],[80.413,8.049],[80.419,8.044],[80.415,8.007],[80.426,7.963],[80.419,7.953],[80.434,7.948],[80.447,7.955],[80.461,7.945],[80.466,7.905],[80.48,7.877],[80.469,7.85],[80.479,7.841],[80.484,7.823],[80.5,7.816],[80.5,7.826],[80.524,7.827],[80.565,7.849],[80.576,7.868],[80.59,7.867],[80.6,7.856],[80.623,7.869],[80.623,7.883],[80.639,7.889],[80.632,7.9],[80.654,7.915],[80.653,7.947],[80.659,7.96],[80.669,7.963],[80.682,7.957],[80.706,7.992],[80.756,8.012],[80.75,8.022],[80.777,8.066],[80.759,8.069],[80.759,8.151],[80.785,8.204],[80.788,8.231],[80.804,8.278],[80.899,8.281],[80.911,8.326],[80.924,8.337],[80.927,8.373],[80.954,8.439],[80.973,8.46],[80.972,8.469],[80.991,8.475],[80.986,8.485],[80.963,8.486],[80.963,8.499],[80.947,8.507],[80.944,8.552],[80.917,8.585],[80.916,8.605],[80.894,8.622],[80.893,8.646],[80.913,8.681],[80.891,8.723],[80.891,8.743],[80.879,8.753],[80.88,8.769],[80.883,8.789],[80.911,8.824],[80.913,8.837],[80.871,8.882],[80.854,8.887],[80.812,8.915],[80.783,8.92],[80.753,8.905],[80.712,8.899],[80.668,8.871],[80.595,8.87],[80.592,8.848],[80.627,8.837],[80.637,8.815],[80.651,8.803],[80.651,8.79],[80.634,8.78],[80.618,8.753],[80.601,8.744],[80.589,8.722],[80.574,8.717],[80.57,8.7],[80.53,8.673],[80.52,8.659],[80.507,8.658],[80.451,8.693],[80.424,8.674],[80.422,8.662],[80.411,8.66],[80.399,8.634],[80.381,8.622],[80.38,8.584],[80.37,8.575],[80.352,8.573],[80.338,8.546],[80.288,8.561],[80.274,8.611],[80.25,8.616],[80.237,8.629],[80.235,8.68],[80.114,8.649],[80.08,8.654],[80.044,8.673],[80.055,8.637],[80.05,8.522],[80.032,8.527]]]}},{"type":"Feature","properties":{"name":"Badulla"},"geometry":{"type":"Polygon","coordinates":[[[80.978,7.625],[80.971,7.534],[80.975,7.427],[80.969,7.413],[80.983,7.394],[80.976,7.363],[81.017,7.233],[81.008,7.216],[80.983,7.213],[80.973,7.196],[80.942,7.197],[80.961,7.157],[80.961,7.142],[80.952,7.145],[80.949,7.139],[80.95,7.13],[80.965,7.121],[80.951,7.101],[80.953,7.09],[80.965,7.078],[80.929,7.038],[80.92,6.991],[80.898,6.977],[80.875,6.974],[80.862,6.978],[80.835,6.956],[80.827,6.926],[80.812,6.918],[80.782,6.922],[80.776,6.913],[80.81,6.902],[80.812,6.88],[80.824,6.876],[80.821,6.862],[80.838,6.845],[80.832,6.834],[80.814,6.828],[80.817,6.819],[80.837,6.812],[80.834,6.803],[80.825,6.793],[80.808,6.792],[80.811,6.756],[80.827,6.762],[80.835,6.746],[80.854,6.746],[80.858,6.741],[80.85,6.73],[80.855,6.719],[80.812,6.704],[80.826,6.69],[80.83,6.67],[80.848,6.667],[80.857,6.658],[80.864,6.666],[80.881,6.664],[80.891,6.676],[80.908,6.679],[80.915,6.695],[80.928,6.688],[80.94,6.69],[80.94,6.679],[80.952,6.672],[80.953,6.655],[80.969,6.654],[80.976,6.645],[80.979,6.617],[80.991,6.621],[80.999,6.615],[80.996,6.575],[81.023,6.542],[81.025,6.573],[81.034,6.584],[81.041,6.591],[81.062,6.578],[81.062,6.599],[81.076,6.611],[81.086,6.61],[81.065,6.633],[81.061,6.652],[81.065,6.7],[81.078,6.707],[81.085,6.728],[81.071,6.737],[81.056,6.735],[81.052,6.739],[81.065,6.762],[81.061,6.783],[81.066,6.814],[81.094,6.809],[81.099,6.812],[81.097,6.828],[81.119,6.829],[81.137,6.839],[81.118,6.862],[81.11,6.863],[81.113,6.873],[81.173,6.901],[81.183,6.929],[81.187,6.921],[81.204,6.921],[81.207,6.94],[81.226,6.946],[81.22,6.96],[81.234,6.966],[81.232,6.989],[81.245,7.009],[81.242,7.053],[81.229,7.084],[81.219,7.081],[81.213,7.097],[81.169,7.084],[81.159,7.114],[81.142,7.137],[81.127,7.145],[81.124,7.165],[81.14,7.188],[81.152,7.195],[81.164,7.174],[81.185,7.173],[81.189,7.191],[81.207,7.202],[81.236,7.239],[81.232,7.268],[81.271,7.277],[81.272,7.291],[81.246,7.326],[81.246,7.335],[81.237,7.342],[81.22,7.333],[81.194,7.378],[81.201,7.396],[81.183,7.444],[81.199,7.472],[81.199,7.501],[81.207,7.516],[81.205,7.555],[81.199,7.564],[81.188,7.574],[81.164,7.57],[81.113,7.545],[81.076,7.512],[81.065,7.515],[81.056,7.506],[81.042,7.505],[81.03,7.538],[81.016,7.553],[81.013,7.596],[80.986,7.611],[80.978,7.625]]]}},{"type":"Feature","properties":{"name":"Batticaloa"},"geometry":{"type":"Polygon","coordinates":[[[81.814,7.48],[81.785,7.604],[81.706,7.744],[81.688,7.763],[81.669,7.767],[81.643,7.787],[81.62,7.829],[81.605,7.824],[81.581,7.845],[81.569,7.87],[81.564,7.899],[81.569,7.918],[81.583,7.92],[81.564,7.927],[81.557,7.943],[81.542,7.927],[81.522,7.927],[81.513,7.914],[81.522,7.933],[81.537,7.932],[81.549,7.941],[81.541,7.97],[81.553,7.988],[81.547,7.994],[81.531,7.983],[81.509,7.997],[81.491,8.012],[81.473,8.043],[81.458,8.099],[81.465,8.111],[81.454,8.113],[81.441,8.135],[81.433,8.167],[81.436,8.178],[81.426,8.188],[81.408,8.249],[81.356,8.257],[81.359,8.265],[81.354,8.269],[81.323,8.262],[81.312,8.252],[81.306,8.029],[81.34,7.957],[81.34,7.937],[81.308,7.937],[81.289,7.947],[81.275,7.937],[81.253,7.936],[81.237,7.92],[81.237,7.889],[81.228,7.867],[81.233,7.844],[81.225,7.823],[81.227,7.781],[81.241,7.739],[81.254,7.731],[81.263,7.736],[81.326,7.733],[81.329,7.719],[81.368,7.667],[81.383,7.657],[81.446,7.642],[81.448,7.62],[81.433,7.57],[81.452,7.543],[81.499,7.522],[81.494,7.515],[81.518,7.509],[81.619,7.508],[81.65,7.525],[81.648,7.503],[81.661,7.472],[81.664,7.399],[81.67,7.401],[81.674,7.414],[81.69,7.421],[81.725,7.455],[81.761,7.46],[81.776,7.482],[81.793,7.471],[81.814,7.48]]]}},{"type":"Feature","properties":{"name":"Monaragala"},"geometry":{"type":"Polygon","coordinates":[[[81.608,6.58],[81.629,6.913],[81.637,6.96],[81.618,6.979],[81.621,6.998],[81.607,7.026],[81.619,7.049],[81.614,7.068],[81.596,7.07],[81.536,7.095],[81.533,7.09],[81.515,7.103],[81.513,7.136],[81.5,7.155],[81.522,7.198],[81.553,7.218],[81.534,7.24],[81.523,7.243],[81.528,7.254],[81.519,7.29],[81.479,7.325],[81.491,7.338],[81.472,7.393],[81.477,7.422],[81.462,7.43],[81.479,7.455],[81.456,7.458],[81.422,7.436],[81.408,7.433],[81.406,7.417],[81.389,7.408],[81.375,7.41],[81.374,7.398],[81.386,7.371],[81.374,7.359],[81.365,7.357],[81.367,7.343],[81.344,7.336],[81.321,7.338],[81.323,7.263],[81.305,7.257],[81.285,7.241],[81.287,7.249],[81.277,7.255],[81.271,7.277],[81.232,7.268],[81.236,7.239],[81.207,7.202],[81.189,7.191],[81.185,7.173],[81.164,7.174],[81.152,7.195],[81.14,7.188],[81.124,7.165],[81.127,7.145],[81.142,7.137],[81.159,7.114],[81.169,7.084],[81.213,7.097],[81.219,7.081],[81.229,7.084],[81.246,7.022],[81.232,6.989],[81.234,6.966],[81.22,6.96],[81.226,6.946],[81.207,6.94],[81.204,6.921],[81.187,6.921],[81.183,6.929],[81.173,6.901],[81.113,6.873],[81.11,6.863],[81.118,6.862],[81.138,6.84],[81.132,6.833],[81.097,6.828],[81.099,6.812],[81.094,6.809],[81.066,6.814],[81.061,6.783],[81.065,6.762],[81.052,6.739],[81.056,6.735],[81.071,6.737],[81.085,6.728],[81.078,6.707],[81.065,6.7],[81.061,6.652],[81.065,6.633],[81.086,6.61],[81.076,6.611],[81.062,6.599],[81.062,6.578],[81.041,6.591],[81.034,6.584],[81.025,6.573],[81.023,6.542],[80.996,6.575],[80.999,6.615],[80.991,6.621],[80.979,6.617],[80.976,6.645],[80.969,6.654],[80.953,6.655],[80.952,6.672],[80.94,6.679],[80.94,6.69],[80.93,6.691],[80.913,6.672],[80.904,6.639],[80.876,6.611],[80.877,6.594],[80.87,6.593],[80.872,6.582],[80.866,6.579],[80.861,6.56],[80.864,6.55],[80.828,6.49],[80.843,6.456],[80.836,6.44],[80.843,6.434],[80.838,6.427],[80.844,6.407],[80.839,6.402],[80.863,6.37],[80.865,6.357],[80.903,6.344],[80.909,6.333],[80.907,6.322],[80.921,6.296],[80.968,6.325],[81.018,6.345],[81.023,6.359],[81.007,6.369],[81.008,6.388],[81.013,6.396],[81.037,6.391],[81.049,6.407],[81.051,6.422],[81.062,6.411],[81.071,6.424],[81.101,6.418],[81.137,6.421],[81.145,6.398],[81.151,6.4],[81.157,6.393],[81.184,6.405],[81.211,6.367],[81.224,6.358],[81.221,6.35],[81.226,6.345],[81.254,6.341],[81.273,6.355],[81.278,6.369],[81.367,6.391],[81.373,6.398],[81.384,6.398],[81.393,6.415],[81.401,6.406],[81.44,6.42],[81.472,6.408],[81.48,6.419],[81.476,6.449],[81.486,6.464],[81.479,6.473],[81.482,6.496],[81.524,6.52],[81.533,6.536],[81.547,6.536],[81.565,6.555],[81.581,6.551],[81.589,6.561],[81.6,6.561],[81.608,6.58]]]}},{"type":"Feature","properties":{"name":"Polonnaruwa"},"geometry":{"type":"Polygon","coordinates":[[[81.241,7.739],[81.227,7.781],[81.225,7.823],[81.233,7.844],[81.228,7.867],[81.237,7.889],[81.237,7.92],[81.253,7.936],[81.275,7.937],[81.289,7.947],[81.308,7.937],[81.34,7.937],[81.34,7.957],[81.306,8.029],[81.312,8.252],[81.288,8.261],[81.273,8.241],[81.266,8.241],[81.269,8.235],[81.25,8.226],[81.251,8.21],[81.238,8.194],[81.243,8.179],[81.235,8.174],[81.233,8.157],[81.208,8.149],[81.192,8.154],[81.207,8.163],[81.213,8.179],[81.204,8.184],[81.206,8.216],[81.199,8.231],[81.187,8.227],[81.166,8.235],[81.139,8.261],[81.124,8.263],[81.106,8.256],[81.078,8.272],[81.05,8.272],[81.036,8.279],[80.989,8.273],[80.98,8.312],[80.962,8.324],[80.952,8.323],[80.941,8.343],[80.931,8.345],[80.911,8.326],[80.899,8.281],[80.804,8.278],[80.788,8.231],[80.785,8.204],[80.759,8.151],[80.759,8.069],[80.777,8.066],[80.75,8.022],[80.772,7.996],[80.779,7.995],[80.778,7.968],[80.788,7.962],[80.799,7.961],[80.799,7.977],[80.815,7.984],[80.826,7.971],[80.84,7.972],[80.853,7.963],[80.834,7.954],[80.82,7.924],[80.811,7.852],[80.802,7.822],[80.793,7.817],[80.796,7.805],[80.769,7.802],[80.761,7.792],[80.766,7.787],[80.764,7.734],[80.774,7.702],[80.77,7.69],[80.761,7.696],[80.779,7.678],[80.805,7.68],[80.809,7.672],[80.837,7.681],[80.853,7.701],[80.856,7.691],[80.87,7.69],[80.877,7.68],[80.884,7.715],[80.907,7.716],[80.928,7.708],[80.989,7.722],[81.049,7.719],[81.069,7.731],[81.094,7.725],[81.118,7.69],[81.198,7.661],[81.214,7.647],[81.221,7.654],[81.223,7.672],[81.239,7.68],[81.239,7.713],[81.234,7.722],[81.241,7.739]]]}},{"type":"Feature","properties":{"name":"Colombo"},"geometry":{"type":"Polygon","coordinates":[[[79.87,6.979],[79.868,6.968],[79.853,6.961],[79.857,6.954],[79.848,6.938],[79.843,6.94],[79.846,6.952],[79.845,6.956],[79.84,6.961],[79.843,6.945],[79.841,6.95],[79.839,6.945],[79.823,6.945],[79.823,6.957],[79.831,6.966],[79.823,6.958],[79.822,6.945],[79.84,6.938],[79.858,6.872],[79.863,6.825],[79.9,6.716],[79.904,6.719],[79.901,6.733],[79.887,6.772],[79.891,6.777],[79.916,6.762],[79.918,6.75],[79.944,6.749],[79.952,6.762],[79.991,6.762],[80.035,6.806],[80.055,6.792],[80.066,6.794],[80.079,6.817],[80.089,6.815],[80.098,6.803],[80.106,6.773],[80.12,6.77],[80.126,6.784],[80.116,6.805],[80.134,6.816],[80.149,6.824],[80.164,6.814],[80.174,6.82],[80.181,6.814],[80.202,6.819],[80.194,6.852],[80.175,6.86],[80.189,6.9],[80.212,6.918],[80.208,6.938],[80.223,6.941],[80.217,6.975],[80.169,6.979],[80.167,6.971],[80.125,6.975],[80.122,6.965],[80.099,6.952],[80.093,6.912],[80.074,6.908],[80.064,6.913],[80.061,6.907],[80.02,6.925],[80.014,6.947],[79.993,6.944],[79.986,6.935],[79.955,6.943],[79.944,6.938],[79.935,6.95],[79.923,6.952],[79.916,6.946],[79.911,6.95],[79.9,6.947],[79.9,6.956],[79.879,6.958],[79.884,6.979],[79.87,6.979]]]}},{"type":"Feature","properties":{"name":"Gampaha"},"geometry":{"type":"Polygon","coordinates":[[[80.179,6.978],[80.181,6.996],[80.163,7.059],[80.188,7.09],[80.186,7.105],[80.196,7.102],[80.199,7.117],[80.213,7.132],[80.183,7.138],[80.163,7.127],[80.153,7.183],[80.145,7.188],[80.152,7.193],[80.159,7.185],[80.161,7.193],[80.184,7.196],[80.187,7.236],[80.2,7.249],[80.169,7.285],[80.144,7.303],[80.149,7.312],[80.139,7.323],[80.124,7.331],[80.059,7.284],[80.047,7.3],[80.031,7.303],[80.027,7.318],[80.015,7.315],[80.007,7.321],[79.988,7.307],[79.994,7.303],[79.982,7.301],[79.978,7.293],[79.952,7.29],[79.956,7.283],[79.946,7.274],[79.924,7.284],[79.927,7.272],[79.925,7.278],[79.915,7.277],[79.916,7.27],[79.908,7.265],[79.908,7.281],[79.905,7.274],[79.899,7.281],[79.898,7.275],[79.885,7.274],[79.876,7.283],[79.866,7.271],[79.853,7.277],[79.842,7.273],[79.839,7.224],[79.829,7.208],[79.84,7.207],[79.836,7.195],[79.848,7.199],[79.853,7.195],[79.866,7.169],[79.874,7.114],[79.865,7.112],[79.863,7.126],[79.858,7.106],[79.853,7.107],[79.856,7.101],[79.845,7.111],[79.847,7.12],[79.823,7.182],[79.83,7.202],[79.826,7.208],[79.817,7.203],[79.87,6.979],[79.884,6.979],[79.879,6.965],[79.883,6.954],[79.9,6.956],[79.898,6.948],[79.911,6.95],[79.916,6.946],[79.923,6.952],[79.935,6.95],[79.944,6.938],[79.955,6.943],[79.986,6.935],[79.993,6.944],[80.014,6.947],[80.02,6.925],[80.061,6.907],[80.064,6.913],[80.074,6.908],[80.093,6.912],[80.099,6.952],[80.122,6.965],[80.125,6.975],[80.167,6.971],[80.169,6.979],[80.179,6.978]]]}},{"type":"Feature","properties":{"name":"Kalutara"},"geometry":{"type":"Polygon","coordinates":[[[80.381,6.426],[80.313,6.534],[80.305,6.539],[80.295,6.564],[80.315,6.571],[80.303,6.596],[80.283,6.618],[80.255,6.627],[80.249,6.659],[80.216,6.692],[80.199,6.727],[80.205,6.731],[80.193,6.761],[80.192,6.782],[80.174,6.82],[80.164,6.814],[80.149,6.824],[80.116,6.805],[80.126,6.784],[80.12,6.77],[80.106,6.773],[80.098,6.803],[80.089,6.815],[80.079,6.817],[80.066,6.794],[80.055,6.792],[80.035,6.806],[79.991,6.762],[79.952,6.762],[79.944,6.749],[79.918,6.75],[79.916,6.762],[79.898,6.776],[79.888,6.775],[79.901,6.733],[79.904,6.719],[79.9,6.716],[79.935,6.641],[79.982,6.512],[79.976,6.506],[79.983,6.477],[79.973,6.47],[79.975,6.46],[79.999,6.427],[80.008,6.437],[80.019,6.434],[80.03,6.42],[80.061,6.408],[80.07,6.398],[80.087,6.402],[80.114,6.386],[80.131,6.366],[80.155,6.367],[80.189,6.354],[80.207,6.36],[80.207,6.372],[80.217,6.38],[80.241,6.377],[80.297,6.325],[80.301,6.335],[80.29,6.392],[80.313,6.397],[80.369,6.427],[80.381,6.426]]]}},{"type":"Feature","properties":{"name":"Kegalle"},"geometry":{"type":"Polygon","coordinates":[[[80.212,6.918],[80.224,6.931],[80.231,6.924],[80.233,6.903],[80.241,6.907],[80.251,6.902],[80.269,6.874],[80.282,6.87],[80.285,6.855],[80.311,6.862],[80.329,6.836],[80.341,6.83],[80.357,6.85],[80.38,6.854],[80.389,6.85],[80.4,6.86],[80.424,6.84],[80.432,6.848],[80.452,6.833],[80.496,6.832],[80.511,6.848],[80.5,6.857],[80.495,6.872],[80.498,6.887],[80.491,6.893],[80.433,6.914],[80.438,6.956],[80.446,6.965],[80.433,6.993],[80.45,6.999],[80.467,7.017],[80.461,7.047],[80.471,7.065],[80.465,7.065],[80.454,7.101],[80.445,7.111],[80.456,7.122],[80.501,7.128],[80.51,7.149],[80.535,7.15],[80.529,7.162],[80.548,7.169],[80.513,7.208],[80.522,7.22],[80.519,7.241],[80.504,7.258],[80.48,7.264],[80.476,7.27],[80.481,7.285],[80.455,7.313],[80.426,7.332],[80.422,7.355],[80.414,7.357],[80.412,7.383],[80.392,7.397],[80.347,7.388],[80.356,7.361],[80.342,7.351],[80.35,7.339],[80.338,7.321],[80.321,7.329],[80.317,7.321],[80.288,7.315],[80.279,7.318],[80.255,7.305],[80.214,7.275],[80.204,7.259],[80.196,7.258],[80.2,7.245],[80.187,7.236],[80.184,7.196],[80.161,7.193],[80.159,7.185],[80.152,7.193],[80.145,7.188],[80.153,7.183],[80.163,7.127],[80.183,7.138],[80.213,7.132],[80.199,7.117],[80.196,7.102],[80.186,7.105],[80.188,7.09],[80.163,7.059],[80.181,6.996],[80.179,6.978],[80.207,6.979],[80.218,6.973],[80.223,6.941],[80.208,6.938],[80.212,6.918]]]}},{"type":"Feature","properties":{"name":"Kurunegala"},"geometry":{"type":"Polygon","coordinates":[[[80.102,8.197],[80.106,8.189],[80.1,8.167],[80.11,8.142],[80.115,8.096],[80.128,8.079],[80.153,8.066],[80.144,8.006],[80.15,7.997],[80.133,7.965],[80.148,7.942],[80.133,7.935],[80.122,7.947],[80.111,7.95],[80.109,7.929],[80.099,7.914],[80.093,7.916],[80.094,7.921],[80.072,7.914],[80.074,7.893],[80.067,7.889],[80.066,7.873],[80.053,7.873],[80.038,7.861],[80.037,7.844],[80.006,7.831],[80.011,7.816],[79.999,7.813],[79.994,7.793],[80.002,7.779],[79.994,7.763],[79.999,7.743],[79.978,7.732],[79.976,7.724],[79.955,7.72],[79.954,7.702],[79.941,7.696],[79.963,7.687],[79.959,7.675],[79.948,7.676],[79.946,7.682],[79.929,7.675],[79.931,7.665],[79.924,7.656],[79.934,7.651],[79.923,7.645],[79.921,7.634],[79.906,7.617],[79.909,7.598],[79.901,7.56],[79.905,7.506],[79.938,7.349],[79.942,7.276],[79.955,7.281],[79.951,7.289],[79.957,7.294],[79.968,7.289],[79.982,7.301],[79.994,7.303],[79.988,7.307],[80.007,7.321],[80.015,7.315],[80.027,7.318],[80.031,7.303],[80.047,7.3],[80.059,7.284],[80.124,7.331],[80.139,7.323],[80.149,7.312],[80.144,7.303],[80.169,7.285],[80.185,7.261],[80.196,7.258],[80.204,7.259],[80.214,7.275],[80.279,7.318],[80.288,7.315],[80.317,7.321],[80.321,7.329],[80.338,7.321],[80.35,7.339],[80.342,7.351],[80.356,7.361],[80.347,7.388],[80.392,7.397],[80.412,7.383],[80.414,7.357],[80.445,7.357],[80.457,7.35],[80.451,7.362],[80.472,7.394],[80.462,7.411],[80.47,7.413],[80.511,7.386],[80.518,7.389],[80.517,7.414],[80.529,7.412],[80.529,7.418],[80.538,7.416],[80.539,7.422],[80.549,7.415],[80.556,7.419],[80.54,7.45],[80.555,7.45],[80.566,7.458],[80.565,7.469],[80.576,7.479],[80.571,7.487],[80.574,7.509],[80.569,7.517],[80.563,7.514],[80.566,7.524],[80.553,7.539],[80.553,7.551],[80.563,7.573],[80.575,7.575],[80.569,7.594],[80.578,7.605],[80.566,7.631],[80.549,7.642],[80.545,7.661],[80.552,7.662],[80.553,7.674],[80.55,7.705],[80.537,7.709],[80.537,7.739],[80.53,7.744],[80.52,7.772],[80.504,7.774],[80.5,7.816],[80.484,7.823],[80.479,7.841],[80.469,7.85],[80.48,7.877],[80.466,7.905],[80.461,7.945],[80.447,7.955],[80.434,7.948],[80.419,7.953],[80.426,7.963],[80.415,8.007],[80.419,8.044],[80.405,8.055],[80.392,8.048],[80.37,8.058],[80.308,8.117],[80.266,8.115],[80.251,8.133],[80.215,8.144],[80.207,8.154],[80.188,8.151],[80.184,8.162],[80.123,8.181],[80.102,8.197]]]}},{"type":"Feature","properties":{"name":"Puttalam"},"geometry":{"type":"MultiPolygon","coordinates":[[[[79.78,8.262],[79.785,8.268],[79.773,8.279],[79.775,8.27],[79.78,8.262]]],[[[79.92,8.567],[79.916,8.549],[79.871,8.536],[79.864,8.451],[79.847,8.441],[79.843,8.423],[79.847,8.351],[79.84,8.346],[79.833,8.325],[79.838,8.311],[79.81,8.239],[79.79,8.234],[79.804,8.231],[79.801,8.222],[79.792,8.228],[79.82,8.203],[79.818,8.17],[79.834,8.152],[79.836,8.137],[79.821,8.123],[79.815,8.1],[79.803,8.084],[79.792,8.085],[79.798,8.072],[79.789,8.076],[79.836,8.014],[79.834,8.001],[79.819,7.997],[79.826,7.97],[79.822,7.958],[79.826,7.923],[79.82,7.914],[79.821,7.961],[79.809,7.953],[79.822,7.967],[79.823,7.98],[79.784,7.979],[79.757,7.988],[79.747,7.994],[79.737,8.014],[79.745,8.036],[79.742,8.053],[79.756,8.063],[79.737,8.073],[79.732,8.085],[79.736,8.113],[79.727,8.123],[79.731,8.142],[79.739,8.144],[79.747,8.167],[79.743,8.176],[79.749,8.182],[79.738,8.202],[79.756,8.224],[79.764,8.216],[79.77,8.221],[79.766,8.241],[79.777,8.261],[79.767,8.262],[79.74,8.231],[79.732,8.228],[79.74,8.242],[79.739,8.25],[79.753,8.248],[79.764,8.268],[79.757,8.272],[79.756,8.264],[79.751,8.265],[79.759,8.276],[79.754,8.29],[79.768,8.301],[79.759,8.303],[79.779,8.348],[79.786,8.37],[79.779,8.377],[79.786,8.384],[79.777,8.379],[79.773,8.368],[79.771,8.343],[79.743,8.274],[79.735,8.236],[79.714,8.217],[79.696,8.21],[79.709,8.218],[79.703,8.219],[79.693,8.211],[79.706,8.147],[79.702,8.115],[79.708,8.094],[79.706,8.057],[79.745,7.934],[79.794,7.719],[79.801,7.64],[79.797,7.613],[79.786,7.606],[79.789,7.539],[79.842,7.273],[79.853,7.277],[79.866,7.271],[79.876,7.283],[79.885,7.274],[79.898,7.275],[79.899,7.281],[79.905,7.274],[79.908,7.281],[79.908,7.265],[79.916,7.27],[79.915,7.277],[79.925,7.278],[79.927,7.272],[79.924,7.284],[79.942,7.276],[79.942,7.281],[79.938,7.349],[79.905,7.506],[79.901,7.56],[79.909,7.598],[79.906,7.617],[79.921,7.634],[79.923,7.645],[79.934,7.651],[79.924,7.656],[79.931,7.665],[79.929,7.675],[79.946,7.682],[79.948,7.676],[79.959,7.675],[79.963,7.687],[79.941,7.696],[79.954,7.702],[79.955,7.72],[79.976,7.724],[79.978,7.732],[79.999,7.743],[79.994,7.763],[80.002,7.779],[79.994,7.793],[79.999,7.813],[80.011,7.816],[80.006,7.831],[80.037,7.844],[80.038,7.861],[80.053,7.873],[80.066,7.873],[80.067,7.889],[80.074,7.893],[80.072,7.914],[80.094,7.921],[80.093,7.916],[80.099,7.914],[80.109,7.929],[80.111,7.95],[80.122,7.947],[80.133,7.935],[80.148,7.942],[80.133,7.965],[80.15,7.997],[80.144,8.006],[80.153,8.066],[80.128,8.079],[80.115,8.096],[80.11,8.142],[80.1,8.167],[80.106,8.189],[80.097,8.209],[80.086,8.211],[80.079,8.224],[80.062,8.22],[80.038,8.238],[80.028,8.227],[80.0,8.228],[79.996,8.254],[79.982,8.277],[79.975,8.337],[79.953,8.369],[79.956,8.394],[79.977,8.397],[79.991,8.414],[79.99,8.423],[80.02,8.445],[80.032,8.465],[80.043,8.493],[80.032,8.527],[79.978,8.553],[79.965,8.55],[79.949,8.559],[79.938,8.556],[79.92,8.567]]],[[[79.801,8.341],[79.807,8.32],[79.811,8.318],[79.807,8.324],[79.813,8.333],[79.804,8.336],[79.811,8.338],[79.801,8.341]]],[[[79.798,8.452],[79.807,8.449],[79.79,8.463],[79.78,8.493],[79.787,8.51],[79.786,8.534],[79.778,8.498],[79.788,8.467],[79.798,8.452]]]]}},{"type":"Feature","properties":{"name":"Ratnapura"},"geometry":{"type":"Polygon","coordinates":[[[80.495,6.368],[80.534,6.374],[80.534,6.388],[80.545,6.389],[80.55,6.396],[80.555,6.389],[80.619,6.396],[80.617,6.371],[80.607,6.36],[80.611,6.346],[80.661,6.354],[80.663,6.34],[80.657,6.337],[80.675,6.322],[80.67,6.319],[80.67,6.306],[80.704,6.307],[80.798,6.267],[80.858,6.272],[80.869,6.267],[80.883,6.246],[80.893,6.249],[80.91,6.238],[80.931,6.24],[80.94,6.228],[80.951,6.235],[80.941,6.271],[80.934,6.273],[80.931,6.288],[80.907,6.322],[80.909,6.333],[80.903,6.344],[80.865,6.357],[80.863,6.37],[80.839,6.402],[80.844,6.407],[80.838,6.427],[80.843,6.434],[80.836,6.44],[80.843,6.456],[80.828,6.49],[80.864,6.55],[80.861,6.56],[80.866,6.579],[80.872,6.582],[80.87,6.593],[80.877,6.594],[80.876,6.611],[80.904,6.639],[80.913,6.672],[80.928,6.688],[80.915,6.695],[80.908,6.679],[80.891,6.676],[80.881,6.664],[80.864,6.666],[80.857,6.658],[80.848,6.667],[80.83,6.67],[80.826,6.69],[80.812,6.704],[80.855,6.719],[80.85,6.73],[80.858,6.741],[80.854,6.746],[80.835,6.746],[80.827,6.762],[80.811,6.756],[80.808,6.792],[80.789,6.774],[80.774,6.778],[80.745,6.758],[80.732,6.763],[80.706,6.755],[80.661,6.762],[80.654,6.751],[80.635,6.753],[80.573,6.764],[80.544,6.776],[80.527,6.768],[80.494,6.785],[80.489,6.797],[80.502,6.808],[80.492,6.816],[80.496,6.832],[80.452,6.833],[80.432,6.848],[80.424,6.84],[80.4,6.86],[80.389,6.85],[80.38,6.854],[80.357,6.85],[80.341,6.83],[80.329,6.836],[80.311,6.862],[80.285,6.855],[80.282,6.87],[80.269,6.874],[80.251,6.902],[80.241,6.907],[80.233,6.903],[80.231,6.924],[80.224,6.931],[80.2,6.904],[80.189,6.9],[80.175,6.86],[80.194,6.852],[80.202,6.832],[80.2,6.816],[80.187,6.819],[80.177,6.812],[80.204,6.739],[80.205,6.731],[80.199,6.727],[80.216,6.692],[80.249,6.659],[80.255,6.627],[80.283,6.618],[80.303,6.596],[80.315,6.571],[80.295,6.564],[80.305,6.539],[80.313,6.534],[80.381,6.426],[80.419,6.392],[80.432,6.389],[80.441,6.395],[80.472,6.378],[80.491,6.38],[80.495,6.368]]]}},{"type":"Feature","properties":{"name":"Kandy"},"geometry":{"type":"Polygon","coordinates":[[[80.974,7.488],[80.932,7.49],[80.918,7.461],[80.91,7.465],[80.906,7.459],[80.899,7.475],[80.887,7.473],[80.879,7.464],[80.863,7.475],[80.85,7.472],[80.84,7.463],[80.82,7.46],[80.807,7.448],[80.808,7.44],[80.79,7.428],[80.753,7.449],[80.728,7.475],[80.701,7.457],[80.712,7.426],[80.706,7.395],[80.698,7.387],[80.654,7.385],[80.573,7.44],[80.566,7.458],[80.555,7.45],[80.54,7.45],[80.556,7.419],[80.549,7.415],[80.539,7.422],[80.538,7.416],[80.529,7.418],[80.529,7.412],[80.517,7.414],[80.518,7.389],[80.511,7.386],[80.47,7.413],[80.462,7.411],[80.472,7.394],[80.451,7.362],[80.46,7.353],[80.426,7.36],[80.422,7.355],[80.426,7.332],[80.455,7.313],[80.481,7.285],[80.476,7.27],[80.48,7.264],[80.504,7.258],[80.519,7.241],[80.522,7.22],[80.513,7.208],[80.548,7.169],[80.529,7.162],[80.535,7.15],[80.51,7.149],[80.501,7.128],[80.456,7.122],[80.445,7.111],[80.454,7.101],[80.465,7.065],[80.471,7.065],[80.464,7.058],[80.461,7.031],[80.473,7.037],[80.497,7.026],[80.516,6.982],[80.54,6.962],[80.553,6.94],[80.578,6.944],[80.578,6.959],[80.59,6.965],[80.594,6.986],[80.603,6.995],[80.562,7.04],[80.552,7.065],[80.54,7.059],[80.541,7.073],[80.554,7.082],[80.561,7.077],[80.572,7.082],[80.578,7.074],[80.627,7.079],[80.638,7.099],[80.649,7.103],[80.689,7.093],[80.73,7.159],[80.739,7.162],[80.771,7.198],[80.767,7.237],[80.753,7.251],[80.752,7.274],[80.802,7.226],[80.802,7.205],[80.823,7.194],[80.85,7.19],[80.88,7.195],[80.885,7.181],[80.898,7.199],[80.942,7.202],[80.973,7.196],[80.983,7.213],[81.008,7.216],[81.017,7.233],[80.976,7.363],[80.983,7.394],[80.969,7.413],[80.975,7.427],[80.974,7.488]]]}},{"type":"Feature","properties":{"name":"Matale"},"geometry":{"type":"Polygon","coordinates":[[[80.989,7.722],[80.928,7.708],[80.907,7.716],[80.884,7.715],[80.877,7.68],[80.87,7.69],[80.856,7.691],[80.853,7.701],[80.837,7.681],[80.809,7.672],[80.805,7.68],[80.779,7.678],[80.761,7.696],[80.77,7.69],[80.774,7.702],[80.764,7.734],[80.766,7.787],[80.761,7.792],[80.769,7.802],[80.796,7.805],[80.793,7.817],[80.802,7.822],[80.811,7.852],[80.82,7.924],[80.834,7.954],[80.853,7.963],[80.84,7.972],[80.826,7.971],[80.815,7.984],[80.799,7.977],[80.799,7.961],[80.788,7.962],[80.778,7.968],[80.779,7.995],[80.756,8.012],[80.706,7.992],[80.682,7.957],[80.669,7.963],[80.659,7.96],[80.653,7.947],[80.654,7.915],[80.632,7.9],[80.639,7.889],[80.623,7.883],[80.623,7.869],[80.6,7.856],[80.59,7.867],[80.576,7.868],[80.565,7.849],[80.524,7.827],[80.5,7.826],[80.497,7.809],[80.504,7.774],[80.52,7.772],[80.53,7.744],[80.537,7.739],[80.537,7.709],[80.55,7.705],[80.554,7.666],[80.545,7.661],[80.549,7.642],[80.566,7.631],[80.578,7.605],[80.569,7.594],[80.575,7.575],[80.563,7.573],[80.553,7.551],[80.553,7.539],[80.566,7.524],[80.563,7.514],[80.569,7.517],[80.574,7.509],[80.571,7.487],[80.576,7.479],[80.565,7.469],[80.573,7.44],[80.654,7.385],[80.698,7.387],[80.706,7.395],[80.712,7.426],[80.701,7.457],[80.728,7.475],[80.753,7.449],[80.79,7.428],[80.808,7.44],[80.807,7.448],[80.82,7.46],[80.84,7.463],[80.85,7.472],[80.863,7.475],[80.879,7.464],[80.887,7.473],[80.899,7.475],[80.906,7.459],[80.91,7.465],[80.918,7.461],[80.932,7.49],[80.974,7.488],[80.972,7.567],[80.978,7.625],[80.982,7.643],[80.995,7.661],[80.988,7.689],[80.993,7.699],[80.989,7.722]]]}},{"type":"Feature","properties":{"name":"Nuwara Eliya"},"geometry":{"type":"Polygon","coordinates":[[[80.946,7.2],[80.898,7.199],[80.885,7.181],[80.88,7.195],[80.85,7.19],[80.811,7.199],[80.802,7.205],[80.802,7.226],[80.752,7.274],[80.753,7.251],[80.767,7.237],[80.771,7.198],[80.739,7.162],[80.73,7.159],[80.689,7.093],[80.649,7.103],[80.638,7.099],[80.627,7.079],[80.578,7.074],[80.572,7.082],[80.561,7.077],[80.554,7.082],[80.541,7.073],[80.54,7.059],[80.552,7.065],[80.562,7.04],[80.603,6.995],[80.594,6.986],[80.59,6.965],[80.578,6.959],[80.578,6.944],[80.553,6.94],[80.54,6.962],[80.516,6.982],[80.497,7.026],[80.473,7.037],[80.463,7.028],[80.467,7.017],[80.45,6.999],[80.433,6.993],[80.446,6.965],[80.438,6.956],[80.433,6.914],[80.498,6.887],[80.495,6.872],[80.511,6.848],[80.492,6.82],[80.502,6.808],[80.489,6.797],[80.494,6.785],[80.527,6.768],[80.544,6.776],[80.573,6.764],[80.654,6.751],[80.661,6.762],[80.706,6.755],[80.732,6.763],[80.745,6.758],[80.774,6.778],[80.789,6.774],[80.814,6.796],[80.825,6.793],[80.837,6.812],[80.817,6.819],[80.814,6.828],[80.832,6.834],[80.838,6.845],[80.821,6.862],[80.824,6.876],[80.812,6.88],[80.81,6.902],[80.778,6.91],[80.777,6.916],[80.782,6.922],[80.816,6.919],[80.83,6.93],[80.835,6.956],[80.862,6.978],[80.875,6.974],[80.898,6.977],[80.92,6.991],[80.929,7.038],[80.965,7.078],[80.953,7.09],[80.951,7.101],[80.965,7.121],[80.95,7.13],[80.952,7.145],[80.961,7.142],[80.961,7.157],[80.942,7.194],[80.946,7.2]]]}},{"type":"Feature","properties":{"name":"Trincomalee"},"geometry":{"type":"Polygon","coordinates":[[[80.775,8.947],[80.753,8.905],[80.783,8.92],[80.812,8.915],[80.854,8.887],[80.871,8.882],[80.913,8.837],[80.911,8.824],[80.883,8.789],[80.88,8.769],[80.879,8.753],[80.891,8.743],[80.891,8.723],[80.913,8.681],[80.893,8.646],[80.894,8.622],[80.916,8.605],[80.917,8.585],[80.944,8.552],[80.947,8.507],[80.963,8.499],[80.963,8.486],[80.986,8.485],[80.991,8.475],[80.972,8.469],[80.973,8.46],[80.954,8.439],[80.927,8.373],[80.924,8.337],[80.931,8.345],[80.941,8.343],[80.952,8.323],[80.962,8.324],[80.98,8.312],[80.989,8.273],[81.036,8.279],[81.05,8.272],[81.078,8.272],[81.106,8.256],[81.124,8.263],[81.139,8.261],[81.166,8.235],[81.187,8.227],[81.199,8.231],[81.206,8.216],[81.204,8.184],[81.213,8.179],[81.207,8.163],[81.197,8.16],[81.193,8.151],[81.208,8.149],[81.233,8.157],[81.235,8.174],[81.243,8.179],[81.238,8.194],[81.251,8.21],[81.25,8.226],[81.269,8.235],[81.266,8.241],[81.273,8.241],[81.288,8.261],[81.312,8.252],[81.33,8.266],[81.354,8.269],[81.359,8.265],[81.356,8.257],[81.408,8.249],[81.389,8.328],[81.393,8.359],[81.381,8.377],[81.348,8.501],[81.317,8.525],[81.303,8.509],[81.281,8.507],[81.288,8.487],[81.279,8.465],[81.244,8.462],[81.249,8.46],[81.238,8.454],[81.243,8.462],[81.223,8.461],[81.204,8.469],[81.191,8.506],[81.178,8.512],[81.15,8.507],[81.139,8.489],[81.122,8.502],[81.121,8.509],[81.134,8.512],[81.155,8.545],[81.178,8.526],[81.18,8.536],[81.187,8.534],[81.186,8.513],[81.192,8.509],[81.213,8.509],[81.205,8.527],[81.214,8.531],[81.201,8.53],[81.203,8.543],[81.192,8.544],[81.206,8.555],[81.193,8.554],[81.192,8.563],[81.2,8.563],[81.192,8.572],[81.2,8.579],[81.203,8.568],[81.22,8.584],[81.207,8.565],[81.228,8.574],[81.235,8.561],[81.222,8.544],[81.232,8.548],[81.227,8.539],[81.232,8.536],[81.246,8.548],[81.247,8.56],[81.239,8.571],[81.246,8.583],[81.24,8.576],[81.233,8.58],[81.22,8.611],[81.227,8.629],[81.225,8.653],[81.205,8.675],[81.176,8.734],[81.121,8.79],[81.1,8.821],[81.086,8.861],[81.078,8.862],[81.08,8.868],[81.068,8.857],[81.048,8.872],[81.03,8.892],[81.007,8.938],[80.997,8.942],[80.966,8.985],[80.959,8.971],[80.965,8.953],[80.94,8.942],[80.947,8.938],[80.941,8.928],[80.932,8.937],[80.925,8.929],[80.923,8.937],[80.914,8.937],[80.912,8.951],[80.905,8.948],[80.91,8.957],[80.906,8.968],[80.926,8.964],[80.931,8.971],[80.916,8.979],[80.927,8.992],[80.917,8.985],[80.902,8.985],[80.9,8.979],[80.89,8.981],[80.87,8.96],[80.833,8.96],[80.775,8.947]]]}}]}};</script>
+<script>
+const TYPES=['New','Difficult station','Special Requests','AT Replacement'];
+const TKEY={'New':'New','Difficult station':'Difficult','Special Requests':'Special','AT Replacement':'AT'};
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const TCOL=t=>css({'New':'--new','Difficult station':'--diff','Special Requests':'--spec','AT Replacement':'--at'}[t]);
+const title=s=>s.toLowerCase().replace(/\b([a-z])/g,m=>m.toUpperCase()).replace(/\b(Moh|Rdhs|Dgh|Bh|Dh|Pmcu|Mo|Sho|Icu|Etu|Opd|Ent|Std|Pbu|Picu|Micu|Sicu|Nicu|Scbu|Pcu|Gi|Gu|A&e|Jmo|Moic|Vp|Edh|Sksrc|Th)\b/g,m=>m.toUpperCase());
+function role(d){
+  if(d==='MO'||d==='MOIC') return 'General MO / MOIC';
+  if(/MOH/.test(d)) return 'Public health (MOH)';
+  if(/RELIEF/.test(d)) return 'MO relief';
+  if(/^SHO/.test(d)) return 'SHO (clinical unit)';
+  if(/^MO /.test(d)) return 'MO (specialty unit)';
+  return 'Other';
+}
+const INST=DATA.inst.map((a,i)=>({id:i,name:a[0],rd:a[1],prov:a[2],lat:a[3],lng:a[4],exact:a[5]===1,place:a[6],lvl:a[7],vac:[]}));
+const VAC=DATA.vac.map(v=>{const o={inst:INST[v[0]],des:v[1],type:v[2],role:role(v[1])};o.inst.vac.push(o);return o;});
+const CAPS={'Ampara':[7.297,81.682],'Anuradhapura':[8.311,80.403],'Badulla':[6.989,81.055],'Batticaloa':[7.717,81.7],'Colombo':[6.927,79.861],'Galle':[6.053,80.221],'Gampaha':[7.084,79.999],'Hambantota':[6.124,81.119],'Jaffna':[9.661,80.025],'Kalmunai':[7.409,81.835],'Kalutara':[6.584,79.96],'Kandy':[7.291,80.636],'Kegalle':[7.251,80.346],'Kilinochchi':[9.38,80.399],'Kurunegala':[7.487,80.365],'Mannar':[8.981,79.904],'Matale':[7.467,80.623],'Matara':[5.949,80.535],'Moneragala':[6.872,81.351],'Mullaitivu':[9.267,80.814],'Nuwara Eliya':[6.97,80.783],'Polonnaruwa':[7.94,81.0],'Puttalam':[8.036,79.828],'Ratnapura':[6.683,80.399],'Trincomalee':[8.587,81.215],'Vavuniya':[8.751,80.498]};
+const km=(a,b)=>{const R=6371,toR=Math.PI/180,dl=(b[0]-a[0])*toR,dn=(b[1]-a[1])*toR;const h=Math.sin(dl/2)**2+Math.cos(a[0]*toR)*Math.cos(b[0]*toR)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h));};
+
+const S={q:'',types:new Set(TYPES),prov:'',rd:'',lvl:'',role:'',from:'Kurunegala',sort:'n',sel:null};
+const $=id=>document.getElementById(id);
+function opts(el,list,all){el.innerHTML=`<option value="">${all}</option>`+list.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');}
+const uniq=f=>[...new Set(VAC.map(f))].sort();
+opts($('prov'),uniq(v=>v.inst.prov).map(p=>[p,p]),'All provinces');
+function fillDist(){const ds=[...new Set(INST.filter(i=>!S.prov||i.prov===S.prov).map(i=>i.rd))].sort();opts($('dist'),ds.map(d=>[d,title(d)]),'All RDHS');$('dist').value=S.rd;}
+fillDist();
+const LV=['National Hospital','Teaching Hospital','District General Hospital','Base Hospital','Divisional Hospital','Primary Medical Care Unit','MOH Office','RDHS Office','Specialised / Other'];
+opts($('lvl'),LV.map(l=>[l,l]),'All levels');
+opts($('role'),['General MO / MOIC','MO (specialty unit)','SHO (clinical unit)','Public health (MOH)','MO relief','Other'].map(r=>[r,r]),'All post groups');
+opts($('from'),Object.keys(CAPS).map(c=>[c,c]),'(none)');$('from').value=S.from;
+
+function typeChips(counts){
+  $('types').innerHTML=TYPES.map(t=>`<button type="button" class="chip" data-t="${t}" aria-pressed="${S.types.has(t)}"><i style="background:${TCOL(t)}"></i>${t}<span class="c">${counts[t]||0}</span></button>`).join('');
+  $('types').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{const t=b.dataset.t;S.types.has(t)?S.types.delete(t):S.types.add(t);if(!S.types.size)TYPES.forEach(x=>S.types.add(x));render();});
+}
+function match(v,ignoreType){
+  if(!ignoreType&&!S.types.has(v.type))return false;
+  if(S.prov&&v.inst.prov!==S.prov)return false;
+  if(S.rd&&v.inst.rd!==S.rd)return false;
+  if(S.lvl&&v.inst.lvl!==S.lvl)return false;
+  if(S.role&&v.role!==S.role)return false;
+  if(S.q){const q=S.q.toUpperCase();if(!v.inst.name.includes(q)&&!v.des.includes(q)&&!v.inst.rd.includes(q))return false;}
+  return true;
+}
+
+// ---- map
+const map=L.map('map',{zoomSnap:.25,attributionControl:false,minZoom:6.5,maxZoom:13}).setView([7.85,80.7],7.5);
+const DNAME={'Ratnapura':'RATHNAPURA','Monaragala':'MONERAGALA'};
+const rdOfDistrict=n=>DNAME[n]||n.toUpperCase();
+let distCounts={};
+const dLayer=L.geoJSON(DATA.districts,{style:()=>({}),onEachFeature:(f,l)=>{
+  l.on('click',()=>{const rd=rdOfDistrict(f.properties.name);S.rd=S.rd===rd?'':rd;S.prov='';$('prov').value='';fillDist();render(true);});
+  l.bindTooltip(()=>{const n=f.properties.name, rd=rdOfDistrict(n);let c=distCounts[rd]||0;let extra='';if(rd==='AMPARA'){c+=(distCounts['KALMUNAI']||0);extra=`<br><span class="note">incl. Kalmunai RDHS ${distCounts['KALMUNAI']||0}</span>`;}return `<div class="tip"><b>${n} district</b><br>${c} vacancies in view${extra}</div>`;},{sticky:true});
+}}).addTo(map);
+map.fitBounds(dLayer.getBounds(),{padding:[10,10]});
+const mLayer=L.layerGroup().addTo(map);
+const legend=L.control({position:'bottomleft'});
+legend.onAdd=()=>{const d=L.DomUtil.create('div','legend');d.innerHTML=`<i style="background:var(--new)"></i>Mostly new posts<br><i style="background:var(--diff)"></i>Has difficult-station posts<br><i style="background:var(--spec)"></i>Special request / AT only<br><i class="dash"></i>Approximate location<br><span class="note">Circle size = vacancies · shading = RDHS total</span>`;return d;};
+legend.addTo(map);
+
+function shade(n,max){if(!n)return css('--land0');const t=Math.sqrt(n/max);const dark=document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&matchMedia('(prefers-color-scheme: dark)').matches);
+  const a=dark?[27,40,39]:[238,243,241], b=dark?[38,110,102]:[150,200,192];return `rgb(${a.map((x,i)=>Math.round(x+(b[i]-x)*t)).join(',')})`;}
+
+function render(fit){
+  const vs=VAC.filter(v=>match(v));
+  const tc={};VAC.filter(v=>match(v,true)).forEach(v=>tc[v.type]=(tc[v.type]||0)+1);typeChips(tc);
+  // kpis
+  const ins=new Map();vs.forEach(v=>{if(!ins.has(v.inst))ins.set(v.inst,[]);ins.get(v.inst).push(v);});
+  const diff=vs.filter(v=>v.type==='Difficult station').length;
+  $('kpis').innerHTML=`<div class="kpi"><b>${vs.length.toLocaleString()}</b><span>Vacancies</span></div><div class="kpi"><b>${ins.size}</b><span>Stations</span></div><div class="kpi diff"><b>${diff}</b><span>Difficult station</span></div><div class="kpi"><b>${new Set(vs.map(v=>v.inst.rd)).size}</b><span>RDHS</span></div>`;
+  // district shading
+  distCounts={};vs.forEach(v=>distCounts[v.inst.rd]=(distCounts[v.inst.rd]||0)+1);
+  const dmax=Math.max(1,...Object.values(distCounts));
+  dLayer.setStyle(f=>{const rd=rdOfDistrict(f.properties.name);let n=distCounts[rd]||0;if(rd==='AMPARA')n+=distCounts['KALMUNAI']||0;const sel=S.rd&&(S.rd===rd||(S.rd==='KALMUNAI'&&rd==='AMPARA'));return {fillColor:shade(n,dmax),fillOpacity:1,color:sel?css('--accent'):css('--line'),weight:sel?2.2:1};});
+  // markers
+  mLayer.clearLayers();
+  const arr=[...ins.entries()].sort((a,b)=>b[1].length-a[1].length);
+  arr.forEach(([i,list])=>{
+    const n=list.length, hasD=list.some(v=>v.type==='Difficult station'), hasN=list.some(v=>v.type==='New');
+    const col=hasD?css('--diff'):hasN?css('--new'):css('--spec');
+    const m=L.circleMarker([i.lat,i.lng],{radius:3.5+Math.sqrt(n)*2.6,color:i.exact?css('--panel'):col,weight:i.exact?1.2:1.6,dashArray:i.exact?null:'3 2',fillColor:col,fillOpacity:i.exact?.82:.35});
+    m.bindTooltip(`<div class="tip"><b>${title(i.name)}</b><br>${n} vacanc${n>1?'ies':'y'} · ${title(i.rd)}${i.exact?'':'<br><span class="approx">location approximate</span>'}</div>`);
+    m.on('click',()=>select(i));
+    m.addTo(mLayer); i._m=m;
+  });
+  if(fit&&arr.length){const b=L.latLngBounds(arr.map(([i])=>[i.lat,i.lng]));map.fitBounds(b.pad(.15),{maxZoom:10});}
+  // bars
+  const dc=Object.entries(distCounts).sort((a,b)=>b[1]-a[1]);
+  const bmax=dc.length?dc[0][1]:1;
+  const segs=rd=>TYPES.map(t=>{const c=vs.filter(v=>v.inst.rd===rd&&v.type===t).length;return c?`<span style="width:${c/bmax*100}%;background:${TCOL(t)}"></span>`:''}).join('');
+  $('dbars').innerHTML=dc.map(([rd,n])=>`<div class="bar${S.rd===rd?' sel':''}" data-rd="${rd}" role="button" tabindex="0"><span>${title(rd)}</span><div class="t">${segs(rd)}</div><span class="n">${n}</span></div>`).join('')||'<div class="note">No matches</div>';
+  $('dbars').querySelectorAll('.bar').forEach(b=>{const f=()=>{S.rd=S.rd===b.dataset.rd?'':b.dataset.rd;$('dist').value=S.rd;render(true);};b.onclick=f;b.onkeydown=e=>{if(e.key==='Enter')f();};});
+  const gc={};vs.forEach(v=>gc[v.des]=(gc[v.des]||0)+1);
+  const gl=Object.entries(gc).sort((a,b)=>b[1]-a[1]).slice(0,12);const gmax=gl.length?gl[0][1]:1;
+  $('gbars').innerHTML=gl.map(([d,n])=>`<div class="bar" data-d="${d}" role="button" tabindex="0" title="Search for ${title(d)}" style="grid-template-columns:130px 1fr 34px"><span>${title(d)}</span><div class="t"><span style="width:${n/gmax*100}%;background:var(--accent)"></span></div><span class="n">${n}</span></div>`).join('');
+  $('gbars').querySelectorAll('.bar').forEach(b=>b.onclick=()=>{S.q=b.dataset.d;$('q').value=S.q;render(true);});
+  // list
+  const from=S.from?CAPS[S.from]:null;
+  let L2=arr.map(([i,list])=>({i,list,d:from?km(from,[i.lat,i.lng]):null}));
+  if(S.sort==='d'&&from)L2.sort((a,b)=>a.d-b.d);else if(S.sort==='a')L2.sort((a,b)=>a.i.name.localeCompare(b.i.name));
+  $('listnote').textContent=`${L2.length} stations${from?` · straight-line distance from ${S.from} town`:''}`;
+  $('items').innerHTML=L2.map(({i,list,d})=>{
+    const tt={};list.forEach(v=>tt[v.type]=(tt[v.type]||0)+1);
+    return `<div class="it${S.sel===i?' sel':''}" data-id="${i.id}" role="button" tabindex="0"><div class="nm">${title(i.name)}</div><div class="cnt">${list.length}<small>${d!=null?Math.round(d)+' km':''}</small></div><div class="meta">${title(i.rd)} · ${i.lvl}${i.exact?'':' · <span class="approx">approx. location</span>'}<br>${Object.entries(tt).map(([t,c])=>`<span class="pill p-${TKEY[t]}">${c} ${t==='Difficult station'?'difficult':t.toLowerCase()}</span>`).join('')}</div></div>`;
+  }).join('')||'<div class="empty">No vacancies match these filters. Try clearing the search or adding vacancy types.</div>';
+  $('items').querySelectorAll('.it').forEach(el=>{const f=()=>select(INST[+el.dataset.id]);el.onclick=f;el.onkeydown=e=>{if(e.key==='Enter')f();};});
+  renderDetail();
+}
+function select(i){S.sel=i;map.setView([i.lat,i.lng],Math.max(map.getZoom(),10));renderDetail();
+  document.querySelectorAll('.it').forEach(e=>e.classList.toggle('sel',+e.dataset.id===i.id));
+  document.querySelector('section.list').scrollTop=0;}
+function renderDetail(){
+  const i=S.sel;if(!i){$('detail').innerHTML='';return;}
+  const vs=i.vac.filter(v=>match(v));const all=i.vac.length;
+  const g={};vs.forEach(v=>{const k=v.des+'|'+v.type;g[k]=(g[k]||0)+1;});
+  const from=S.from?CAPS[S.from]:null;
+  $('detail').innerHTML=`<div class="detail"><button class="close" type="button" aria-label="Close station details" id="cls">×</button><h3>${title(i.name)}</h3>
+  <div class="note">${i.lvl} · ${title(i.rd)} RDHS · ${i.prov} Province${from?` · ~${Math.round(km(from,[i.lat,i.lng]))} km from ${S.from}`:''}</div>
+  <div class="note">${i.exact?`Mapped to ${i.place}`:'<span class="approx">Town not found in gazetteer; pin placed inside the RDHS area</span>'}</div>
+  <table>${Object.entries(g).sort((a,b)=>b[1]-a[1]).map(([k,c])=>{const [d,t]=k.split('|');return `<tr><td>${title(d)} <span class="pill p-${TKEY[t]}">${t==='Difficult station'?'difficult':t.toLowerCase()}</span></td><td class="k">${c}</td></tr>`}).join('')}</table>
+  ${vs.length<all?`<div class="note" style="margin-top:6px">${all-vs.length} more post(s) here are hidden by your filters.</div>`:''}</div>`;
+  $('cls').onclick=()=>{S.sel=null;render();};
+}
+$('q').oninput=e=>{S.q=e.target.value.trim();clearTimeout(window._t);window._t=setTimeout(()=>render(true),200);};
+$('prov').onchange=e=>{S.prov=e.target.value;S.rd='';fillDist();render(true);};
+$('dist').onchange=e=>{S.rd=e.target.value;render(true);};
+$('lvl').onchange=e=>{S.lvl=e.target.value;render(true);};
+$('role').onchange=e=>{S.role=e.target.value;render(true);};
+$('from').onchange=e=>{S.from=e.target.value;render();};
+$('sort').onchange=e=>{S.sort=e.target.value;render();};
+$('reset').onclick=()=>{Object.assign(S,{q:'',prov:'',rd:'',lvl:'',role:'',sel:null});TYPES.forEach(t=>S.types.add(t));['q','prov','lvl','role'].forEach(k=>$(k).value='');fillDist();render();map.fitBounds(dLayer.getBounds(),{padding:[10,10]});};
+render();
+</script>
+</body>
+</html>
